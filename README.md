@@ -1,2 +1,3 @@
 # toolshed
-Python-based backup utilities
+
+Python-based tools for managing data backups
