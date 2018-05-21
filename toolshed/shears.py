@@ -2,7 +2,8 @@ from __future__ import print_function
 
 from collections import OrderedDict
 from datetime import datetime, timedelta
-from settings import *
+
+from .settings import *
 
 import os
 
@@ -111,7 +112,7 @@ class Shears(object):
 
     def prune(self):
         """Starting point to prune backups at all levels"""
-        for level, details in self.backup_levels.iteritems():
+        for level, details in self.backup_levels.items():
             self.prune_level(level, details['path'], details['limit'])
 
 
@@ -143,7 +144,7 @@ class Shears(object):
             remove_files.append(backup_files.pop(0))
 
         # remove the files for this level
-        levels = self.backup_levels.keys()
+        levels = list(self.backup_levels.keys())
         level_index = levels.index(level)
         for backup_file in remove_files:
             moved = False
