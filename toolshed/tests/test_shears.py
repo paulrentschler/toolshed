@@ -62,7 +62,12 @@ class TestStringMethods(unittest.TestCase):
 
     def tearDown(self):
         """Delete the temporary directory and everything it contains"""
-        shutil.rmtree(self.tmp_path, ignore_errors=True)
+        error_free = True
+        for error in self._outcome.errors:
+            if error[1] is not None:
+                error_free = False
+        if error_free:
+            shutil.rmtree(self.tmp_path, ignore_errors=True)
 
 
     def test_everything(self):
