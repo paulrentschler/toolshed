@@ -8,12 +8,10 @@ import unittest
 import uuid
 
 
-class TestStringMethods(unittest.TestCase):
+class TestShears(unittest.TestCase):
 
     def create_files(self, start_date, num_files, extension, name_suffix=''):
         """Create sequential backup files
-
-        [description]
 
         Arguments:
             start_date {date} -- Starting date for the first backup file
