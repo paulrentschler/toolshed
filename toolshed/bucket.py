@@ -1,9 +1,7 @@
-from __future__ import print_function
-
 from datetime import datetime
-from settings import *
-from subprocess import call, check_output
+from subprocess import call, CalledProcessError, check_output, STDOUT
 
+from toolshed.settings import *
 from toolshed.tool import Tool
 
 import os
@@ -22,6 +20,7 @@ class Bucket(Tool):
         self.file_group = options.get('file_group', None)
         self.file_user = options.get('file_user', None)
         self.today = datetime.now()
+        self.verbosity = options.get('verbosity', 1)
         self.set_tables(
             options.get('tables_include', None),
             options.get('tables_exclude', None)
@@ -33,13 +32,14 @@ class Bucket(Tool):
         self.write(
             'Database backup for ({}) started on: {}\n'.format(
                 self.db_host,
-                today.strftime("%-m/%-d/%Y %H:%M"),
+                self.today.strftime("%-m/%-d/%Y %H:%M"),
             ),
             verbosity=1,
         )
 
-        for database, tables in DB.iteritems():
-            print("Backing up database: {}".format(database))
+        self.create_backup_folder()
+        for database, tables in self.tables.items():
+            self.write('Backing up database: {}'.format(database), verbosity=1)  # NOQA
             for table in tables:
                 # output the structure
                 self.dump(database, table, structure=True, data=False)
@@ -51,9 +51,12 @@ class Bucket(Tool):
         self.collapse()
 
         # output the completion stats
-        print("\nBackup finished on {}\n".format(
-            datetime.now().strftime("%-m/%-d/%Y %H:%M")
-        ))
+        self.write(
+            '\nBackup finished on {}\n'.format(
+                datetime.now().strftime('%-m/%-d/%Y %H:%M')
+            ),
+            verbosity=1
+        )
 
 
     def collapse(self):
@@ -66,12 +69,13 @@ class Bucket(Tool):
         The resulting file can have it's ownership changed based on
         provided user and group values.
         """
-        cmd = 'tar -cz -C {} *'.format(backup_path)
+        cmd = 'tar -cz *'
         filename = "{}.{}".format(
             self.today.strftime("%Y-%m-%d"),
             'bak' if self.encrypt_key else 'tar.gz',
         )
         filename = os.path.join(self.base_path, filename)
+        success = True
         if self.encrypt_key:
             # encrypt the backup
             cmd += ' | gpg --output {} --encrypt --recipient {} > /dev/null'.format(  # NOQA
@@ -81,18 +85,22 @@ class Bucket(Tool):
             call(cmd, shell=True, cwd=self.backup_path)
         else:
             # tar the backup files
-            with open(filename, 'wb') as out_file:
-                call(cmd, shell=True, stdout=out_file, cwd=self.backup_path)
+            try:
+                with open(filename, 'wb') as out_file:
+                    call(cmd, shell=True, stdout=out_file, cwd=self.backup_path)  # NOQA
+            except CalledProcessError:
+                success = False
 
-        # fix the permissions on the backup file
-        call(['chmod', '440', filename])
-        if self.file_group is not None:
-            call(['chgrp', self.file_group, filename])
-        if self.file_user is not None:
-            call(['chown', self.file_user, filename])
+        if success:
+            # fix the permissions on the backup file
+            call(['chmod', '440', filename])
+            if self.file_group is not None:
+                call(['chgrp', self.file_group, filename])
+            if self.file_user is not None:
+                call(['chown', self.file_user, filename])
 
-        # delete the original backup directory
-        shutil.rmtree(self.backup_path)
+            # delete the original backup directory
+            shutil.rmtree(self.backup_path)
 
 
     def create_backup_folder(self):
@@ -143,7 +151,7 @@ class Bucket(Tool):
         # determine the filename extension to use
         extension = 'sql'
         if structure and not data:
-            extension = 'struct.sql'
+            extension = 'structure.sql'
         elif not structure and data:
             extension = 'data.sql'
         filename = '{}_{}.{}'.format(
@@ -224,26 +232,24 @@ class Bucket(Tool):
         results = {}
         try:
             databases_raw = check_output(
-                ['mysql', '-e', "'show databases'"],
+                ['mysql', '-e', 'show databases'],
                 stderr=STDOUT
             ).decode()
         except CalledProcessError:
             return results
         databases = databases_raw.split('\n')
-        for database in databases[3:-1]:
-            database = database[1:-1].strip()
+        for database in databases[1:-1]:
             results[database] = []
             try:
                 tables_raw = check_output(
-                    ['mysql', database, '-e', "'show tables'"],
+                    ['mysql', database, '-e', 'show tables'],
                     stderr=STDOUT
                 ).decode()
             except CalledProcessError:
                 del results[database]
             else:
                 tables = tables_raw.split('\n')
-                for table in tables[3:-1]:
-                    table = table[1:-1].strip()
+                for table in tables[1:-1]:
                     results[database].append(table)
         return results
 
@@ -280,7 +286,7 @@ class Bucket(Tool):
                     else:
                         try:
                             self.tables[database].remove(table)
-                        except KeyError:
+                        except (KeyError, ValueError):
                             pass
 
 
