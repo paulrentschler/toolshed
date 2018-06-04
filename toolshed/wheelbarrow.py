@@ -1,5 +1,5 @@
 from datetime import datetime
-from subprocess import call
+from subprocess import call, CalledProcessError
 
 from toolshed.tool import Tool
 
@@ -17,6 +17,7 @@ class Wheelbarrow(Tool):
             **options {dict} -- additional backup options
         """
         self.backup_path = backup_path
+        self.combined = options.get('combined', True)
         self.file_group = options.get('file_group', None)
         self.file_user = options.get('file_user', None)
         self.plone_path = plone_path
@@ -64,19 +65,31 @@ class Wheelbarrow(Tool):
 
     def backup_blob_storage(self):
         """Backup the Plone blob storage by tarring the files"""
-        filename = '{}_blobstorage.tar.gz'.format(self.today.strftime('%Y-%m-%d'))  # NOQA
+        filename = '{}{}.tar.gz'.format(
+            self.today.strftime('%Y-%m-%d'),
+            '' if self.combined else '_blobstorage'
+        )
         blob_path = os.path.join(self.plone_path, 'var', 'blobstorage')
         cmd = 'tar -cz .layout *'
-        with open(os.path.join(self.backup_path, filename), 'wb') as out_file:  # NOQA
-            call(cmd, shell=True, stdout=out_file, cwd=blob_path)  # NOQA
+        try:
+            with open(os.path.join(self.backup_path, filename), 'wb') as out_file:  # NOQA
+                call(cmd, shell=True, stdout=out_file, cwd=blob_path)
+        except CalledProcessError:
+            pass
+        else:
+            if self.combined:
+                shutil.rmtree(os.path.join(blob_path, 'Data.fs'), ignore_errors=True)  # NOQA
 
 
     def copy_datafs(self):
         """Copy the Plone data.fs file and prefix with the current date"""
-        filename = '{}_data.fs'.format(self.today.strftime('%Y-%m-%d'))
-        dest_file = os.path.join(self.backup_path, filename)
         datafs_path = os.path.join(self.plone_path, 'var', 'filestorage')
         src_file = os.path.join(datafs_path, 'Data.fs')
+        if self.combined:
+            dest_file = os.path.join(self.plone_path, 'var', 'blobstorage', 'Data.fs')  # NOQA
+        if not self.combined:
+            filename = '{}_data.fs'.format(self.today.strftime('%Y-%m-%d'))
+            dest_file = os.path.join(self.backup_path, filename)
         shutil.copyfile(src_file, dest_file)
 
 
