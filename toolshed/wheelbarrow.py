@@ -43,16 +43,28 @@ class Wheelbarrow(Tool):
         self.write('Backing up the blob storage', verbosity=1)
         self.backup_blob_storage()
 
+        date_str = self.today.strftime('%Y-%m-%d')
+        if self.combined:
+            files = [
+                os.path.join(self.backup_path, '{}.tar.gz'.format(date_str)),
+            ]
+        else:
+            files = [
+                os.path.join(self.backup_path, '{}_data.fs'.format(date_str)),
+                os.path.join(self.backup_path, '{}_blobstorage.tar.gz'.format(date_str)),  # NOQA
+            ]
+
         # fix the permissions on the backup file
-        files = '{}_*'.format(self.today.strftime('%Y-%m-%d'))
-        files = os.path.join(self.backup_path, files)
-        call(['chmod', '440', files])
+        for file in files:
+            call(['chmod', '440', file])
 
         # update backup file ownership
         if self.file_group is not None:
-            call(['chgrp', self.file_group, files])
+            for file in files:
+                call(['chgrp', self.file_group, file])
         if self.file_user is not None:
-            call(['chown', self.file_user, files])
+            for file in files:
+                call(['chown', self.file_user, file])
 
         # output the completion stats
         self.write(
