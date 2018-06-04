@@ -90,7 +90,7 @@ class Wheelbarrow(Tool):
             pass
         else:
             if self.combined:
-                shutil.rmtree(os.path.join(blob_path, 'Data.fs'), ignore_errors=True)  # NOQA
+                os.remove(os.path.join(blob_path, 'Data.fs'))
 
 
     def copy_datafs(self):
