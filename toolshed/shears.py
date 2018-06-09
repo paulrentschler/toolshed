@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from __future__ import print_function
 
 from collections import OrderedDict
@@ -6,10 +8,18 @@ from datetime import datetime, timedelta
 from .settings import *
 
 import os
+import sys
 
 
 class Shears(object):
-    def __init__(self, backup_path, file_extension):
+    def __init__(self, backup_path, file_extension, **options):
+        """Backup file pruning tool
+
+        Arguments:
+            backup_path {string} -- Path to store the backup files
+            file_extension {string} -- Path to the `zeocluster` folder
+            **options {dict} -- additional pruning options
+        """
         self.backup_path = backup_path
         self.file_extension = file_extension.strip().replace('.', '')
         self.backup_levels = OrderedDict()
@@ -177,7 +187,37 @@ class Shears(object):
 
 
 
+class Command(BaseCommand):
+    help = 'Backup file pruning tool'
+
+
+    def add_arguments(self, parser):
+        """Define command arguments"""
+        # Positional arguments
+        parser.add_argument(
+            'backup_path',
+            action='store',
+            help='Path where backup files are stored',
+        )
+        parser.add_argument(
+            'extension',
+            action='store',
+            help='File extension of the backup files to prune',
+        )
+
+
+    def handle(self, *args, **options):
+        backup_path = options.pop('backup_path')
+        extension = options.pop('extension')
+        shears = Shears(backup_path, extension, **options)
+        try:
+            shears.prune()
+        except (ValueError,) as e:
+            raise CommandError(e.msg)
+
+
+
+
 if __name__ == '__main__':
-    ### TODO: implement argparse and a proper call to shears.prune()
-    shears = Shears('./', '.bak')
-    shears.prune()
+    cmd = Command()
+    cmd.run_from_argv(sys.argv)
