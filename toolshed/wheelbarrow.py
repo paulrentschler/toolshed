@@ -60,17 +60,8 @@ class Wheelbarrow(Tool):
                 os.path.join(self.backup_path, '{}_blobstorage.tar.gz'.format(date_str)),  # NOQA
             ]
 
-        # fix the permissions on the backup file
-        for file in files:
-            call(['chmod', '440', file])
-
-        # update backup file ownership
-        if self.file_group is not None:
-            for file in files:
-                call(['chgrp', self.file_group, file])
-        if self.file_owner is not None:
-            for file in files:
-                call(['chown', self.file_owner, file])
+        # set the permissions and ownerships for files
+        self.file_ownership_permissions(files)
 
         # output the completion stats
         self.write('\n{}Backup finished on {}\n'.format(

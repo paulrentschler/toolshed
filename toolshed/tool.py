@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 from argparse import ArgumentParser
+from subprocess import call
 
 import os
 import sys
@@ -216,6 +217,56 @@ class BaseCommand(object):
 
 class Tool(object):
     verbosity = 1
+
+
+    def file_ownership_permissions(self, files, indent=4, permissions='440'):
+        """Set the ownership and permissions of the files
+
+        Arguments:
+            files {list} -- List of files to set the ownership and
+                            permissions
+
+        Keyword Arguments:
+            indent {integer} -- Number of spaces to indent the process
+                                statements (default: {4})
+            permissions {string} -- Unix permissions code to use
+                                    (default: {'440'})
+        """
+        indent_str = ''
+        for i in range(indent):
+            indent_str += ' '
+
+        # fix the permissions on the backup files
+        self.write('{}{}Set file permissions to: {}'.format(
+            'DryRun: ' if self.dryrun else '',
+            indent_str,
+            permissions
+        ), verbosity=3)
+        if not self.dryrun:
+            for file in files:
+                call(['chmod', permissions, file])
+
+        # update the file group of the backup files
+        if self.file_group is not None:
+            self.write('{}{}Update the file group to: {}'.format(
+                'DryRun: ' if self.dryrun else '',
+                indent_str,
+                self.file_group,
+            ), verbosity=3)
+            if not self.dryrun:
+                for file in files:
+                    call(['chgrp', self.file_group, file])
+
+        # update the file ownership of the backup files
+        if self.file_owner is not None:
+            self.write('{}{}Update the file owner to: {}'.format(
+                'DryRun: ' if self.dryrun else '',
+                indent_str,
+                self.file_owner,
+            ), verbosity=3)
+            if not self.dryrun:
+                for file in files:
+                    call(['chown', self.file_owner, file])
 
 
     def write(self, msg, end='\n', verbosity=1):

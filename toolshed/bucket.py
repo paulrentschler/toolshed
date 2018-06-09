@@ -124,26 +124,8 @@ class Bucket(Tool):
                     success = False
 
         if success:
-            # fix the permissions on the backup file
-            self.write('{}    Set file permissions to: 440'.format(
-                'DryRun: ' if self.dryrun else '',
-            ), verbosity=3)
-            if not self.dryrun:
-                call(['chmod', '440', filename])
-            if self.file_group is not None:
-                self.write('{}    Update the file group to: {}'.format(
-                    'DryRun: ' if self.dryrun else '',
-                    self.file_group,
-                ), verbosity=3)
-                if not self.dryrun:
-                    call(['chgrp', self.file_group, filename])
-            if self.file_owner is not None:
-                self.write('{}    Update the file owner to: {}'.format(
-                    'DryRun: ' if self.dryrun else '',
-                    self.file_owner,
-                ), verbosity=3)
-                if not self.dryrun:
-                    call(['chown', self.file_owner, filename])
+            # set the permissions and ownerships for files
+            self.file_ownership_permissions([filename, ])
 
             # delete the original backup directory
             self.write('{}Delete the backup folder: {}'.format(
