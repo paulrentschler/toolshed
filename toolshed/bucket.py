@@ -269,7 +269,7 @@ class Bucket(Tool):
                                      ones listed.
         """
         self.tables = {}
-        if tables_include is not None:
+        if tables_include:
             for entry in tables_include:
                 database, table = entry.split('.', 1)
                 if database not in self.tables.keys():
@@ -277,7 +277,7 @@ class Bucket(Tool):
                 self.tables[database].append(table)
         else:
             self.tables = self.get_tables()
-            if tables_exclude is not None:
+            if tables_exclude:
                 for entry in tables_exclude:
                     database, table = entry.split('.', 1)
                     if table == '*':
@@ -313,6 +313,14 @@ class Command(BaseCommand):
             help='Encryption key used to encrypt the backup files',
         )
         parser.add_argument(
+            '--exclude',
+            action='append',
+            default=[],
+            dest='tables_exclude',
+            help='Database table to exclude from the backup in the format '
+                 'database.table (can be used multiple times)',
+        )
+        parser.add_argument(
             '-g', '--group',
             action='store',
             default=None,
@@ -325,6 +333,15 @@ class Command(BaseCommand):
             default='localhost',
             dest='db_host',
             help='The database host to be backed up',
+        )
+        parser.add_argument(
+            '--include',
+            action='append',
+            default=[],
+            dest='tables_include',
+            help='Database table to include in the backup in the format '
+                 'database.table (database.* is valid) '
+                 '(can be used multiple times)',
         )
         parser.add_argument(
             '-o', '--owner',
