@@ -3,11 +3,13 @@
 from collections import OrderedDict
 from datetime import datetime, timedelta
 
+from toolshed.tool import BaseCommand, CommandError, Tool
+
 import os
 import sys
 
 
-class Shears(object):
+class Shears(Tool):
     def __init__(self, backup_path, file_extensions, **options):
         """Backup file pruning tool
 
@@ -176,7 +178,7 @@ class Shears(object):
         self.write('{}    Prune {} *.{} files ({} max)'.format(
             'DryRun: ' if self.dryrun else '',
             level,
-            extension,
+            file_extension,
             limit,
         ), verbosity=1)
 
