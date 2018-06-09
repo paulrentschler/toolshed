@@ -1,10 +1,13 @@
+#!/usr/bin/env python
+
 from datetime import datetime
 from subprocess import call, CalledProcessError
 
-from toolshed.tool import Tool
+from toolshed.tool import BaseCommand, CommandError, Tool
 
 import os
 import shutil
+import sys
 
 
 class Wheelbarrow(Tool):
@@ -107,7 +110,61 @@ class Wheelbarrow(Tool):
 
 
 
+class Command(BaseCommand):
+    help = 'Database backup tool'
+
+
+    def add_arguments(self, parser):
+        """Define command arguments"""
+        # Positional arguments
+        parser.add_argument(
+            'backup_path',
+            action='store',
+            help='Path to store backup files',
+        )
+        parser.add_argument(
+            'plone_path',
+            action='store',
+            help='Path to the Plone zeocluster directory',
+        )
+
+        # Optional arguments
+        parser.add_argument(
+            '-c', '--combine',
+            action='store_true',
+            default=False,
+            dest='combined',
+            help='Whether the Data.fs and blob storage should be combined '
+                 'into a single backup file',
+        )
+        parser.add_argument(
+            '-g', '--group',
+            action='store',
+            default=None,
+            dest='file_group',
+            help='Unix group who should own the backup files',
+        )
+        parser.add_argument(
+            '-o', '--owner',
+            action='store',
+            default=None,
+            dest='file_owner',
+            help='Unix user who should own the backup files',
+        )
+
+
+    def handle(self, *args, **options):
+        backup_path = options.pop('backup_path')
+        plone_path = options.pop('plone_path')
+        wheelbarrow = Wheelbarrow(backup_path, plone_path, **options)
+        try:
+            wheelbarrow.backup()
+        except (ValueError,) as e:
+            raise CommandError(e.msg)
+
+
+
+
 if __name__ == '__main__':
-    ### TODO: implement argparse and a proper call to bucket.backup()
-    wheelbarrow = Wheelbarrow('./', '/opt/current-plone/zeocluster')
-    wheelbarrow.backup()
+    cmd = Command()
+    cmd.run_from_argv(sys.argv)
