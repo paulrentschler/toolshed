@@ -4,7 +4,7 @@ from datetime import datetime
 from subprocess import call, CalledProcessError, check_output, STDOUT
 
 from toolshed.settings import *
-from toolshed.tool import BaseCommand, Tool
+from toolshed.tool import BaseCommand, CommandError, Tool
 
 import os
 import shutil
@@ -427,7 +427,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         backup_path = options.pop('backup_path')
         bucket = Bucket(backup_path, **options)
-        bucket.backup()
+        try:
+            bucket.backup()
+        except (FileExistsError, ValueError) as e:
+            raise CommandError(e.msg)
 
 
 
