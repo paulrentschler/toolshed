@@ -3,7 +3,6 @@
 from datetime import datetime
 from subprocess import call, CalledProcessError, check_output, STDOUT
 
-from toolshed.settings import *
 from toolshed.tool import BaseCommand, CommandError, Tool
 
 import os
