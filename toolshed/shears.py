@@ -3,8 +3,6 @@
 from collections import OrderedDict
 from datetime import datetime, timedelta
 
-from .settings import *
-
 import os
 import sys
 
@@ -19,6 +17,7 @@ class Shears(object):
                                       files to prune
             **options {dict} -- additional pruning options
         """
+        self.backup_levels = OrderedDict()
         self.backup_path = backup_path
         self.dryrun = options.get('dryrun', False)
         self.file_extensions = [
@@ -26,11 +25,13 @@ class Shears(object):
         ]
         self.verbosity = options.get('verbosity', 1)
 
-        self.backup_levels = OrderedDict()
+        # set the backup levels, max files, and paths
         for level in ('daily', 'weekly', 'monthly', 'yearly'):
             try:
-                days = BACKUP_LEVELS[level]
+                days = options.get(level, 0)
             except KeyError:
+                continue
+            if days == 0:
                 continue
             self.backup_levels[level] = {
                 'limit': days,
@@ -265,6 +266,36 @@ class Command(BaseCommand):
             help='File extension of the backup files to prune '
                  '(more than one can be specified)',
             nargs='+',
+        )
+
+        # Optional arguments
+        parser.add_argument(
+            '--daily',
+            action='store',
+            default=14,
+            dest='daily',
+            help='Number of daily backups to keep (0 if no daily backups)',
+        )
+        parser.add_argument(
+            '--weekly',
+            action='store',
+            default=6,
+            dest='weekly',
+            help='Number of weekly backups to keep (0 if no weekly backups)',
+        )
+        parser.add_argument(
+            '--monthly',
+            action='store',
+            default=6,
+            dest='monthly',
+            help='Number of monthly backups to keep (0 if no monthly backups)',
+        )
+        parser.add_argument(
+            '--yearly',
+            action='store',
+            default=6,
+            dest='yearly',
+            help='Number of yearly backups to keep (0 if no yearly backups)',
         )
 
 
