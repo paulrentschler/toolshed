@@ -41,11 +41,25 @@ class Bucket(Tool):
 
         self.create_backup_folder()
         for database, tables in self.tables.items():
+            if self._is_excluded(database):
+                self.write('{}  Skipping database: {}'.format(
+                    'DryRun: ' if self.dryrun else '',
+                    database,
+                ), verbosity=1)
+                continue
+
             self.write('{}Backing up database: {}'.format(
                 'DryRun: ' if self.dryrun else '',
                 database,
             ), verbosity=1)
             for table in tables:
+                if self._is_excluded(database, table):
+                    self.write('{}     Skipping table: {}'.format(
+                        'DryRun: ' if self.dryrun else '',
+                        table,
+                    ), verbosity=1)
+                    continue
+
                 self.write('{}   Backing up table: {}'.format(
                     'DryRun: ' if self.dryrun else '',
                     table,
@@ -306,17 +320,33 @@ class Bucket(Tool):
         return results
 
 
+    def _is_excluded(self, database, table=None):
+        """Indicates if the database/table is excluded from the backup
+
+        Arguments:
+            database {string} -- The database name to check
+            table {string} -- The table name to check
+
+        Returns:
+            bool -- Whether or not the database/table is to be
+                    excluded from the backup
+        """
+        if database in self.tables_exclude.keys():
+            if table is None:
+                return not self.tables_exclude[database]
+            else:
+                return table in self.tables_exclude[database]
+
+
     def set_tables(self, tables_include, tables_exclude):
         """Set the databases/tables to backup
 
         Arguments:
-            tables_include {list} -- List of database.table combinations to
-                                     backup.  If not None, only these tables
-                                     are backed up.
-            tables_exclude {list} -- List of database.table combinations to
-                                     NOT backup.  If not None, will backup
-                                     all databases and tables except the
-                                     ones listed.
+            tables_include {list} -- List of `database.table` combinations
+                                     to backup.  If not specified, all
+                                     databases and tables are used.
+            tables_exclude {list} -- List of `database.table` combinations
+                                     to NOT backup.
         """
         self.tables = {}
         if tables_include:
@@ -327,19 +357,15 @@ class Bucket(Tool):
                 self.tables[database].append(table)
         else:
             self.tables = self.get_tables()
-            if tables_exclude:
-                for entry in tables_exclude:
-                    database, table = entry.split('.', 1)
-                    if table == '*':
-                        try:
-                            del self.tables[database]
-                        except KeyError:
-                            pass
-                    else:
-                        try:
-                            self.tables[database].remove(table)
-                        except (KeyError, ValueError):
-                            pass
+
+        self.tables_exclude = {}
+        if tables_exclude:
+            for entry in tables_exclude:
+                database, table = entry.split('.', 1)
+                if database not in self.tables_exclude.keys():
+                    self.tables_exclude[database] = []
+                if table != '*':
+                    self.tables_exclude[database].append(table)
 
 
 
