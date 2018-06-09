@@ -370,6 +370,9 @@ class Bucket(Tool):
 
 
 class Command(BaseCommand):
+    help = 'Database backup tool'
+
+
     def add_arguments(self, parser):
         """Define command arguments"""
         # Positional arguments
