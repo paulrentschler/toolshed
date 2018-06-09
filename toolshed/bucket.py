@@ -18,6 +18,7 @@ class Bucket(Tool):
         self.db_host = options.get('db_host', 'localhost')
         self.db_pass = options.get('db_pass', None)
         self.db_user = options.get('db_user', None)
+        self.dryrun = options.get('dryrun', False)
         self.encrypt_key = options.get('encrypt_key', None)
         self.file_group = options.get('file_group', None)
         self.file_owner = options.get('file_owner', None)
@@ -31,18 +32,25 @@ class Bucket(Tool):
 
     def backup(self):
         """Backup the databse"""
-        self.write(
-            'Database backup for ({}) started on: {}\n'.format(
-                self.db_host,
-                self.today.strftime("%-m/%-d/%Y %H:%M"),
-            ),
-            verbosity=1,
-        )
+        self.write('{}Database ({}) backup for ({}) started on: {}\n'.format(
+            'DryRun: ' if self.dryrun else '',
+            self.database_type,
+            self.db_host,
+            self.today.strftime("%-m/%-d/%Y %H:%M"),
+        ), verbosity=1)
 
         self.create_backup_folder()
         for database, tables in self.tables.items():
-            self.write('Backing up database: {}'.format(database), verbosity=1)  # NOQA
+            self.write('{}Backing up database: {}'.format(
+                'DryRun: ' if self.dryrun else '',
+                database,
+            ), verbosity=1)
             for table in tables:
+                self.write('{}   Backing up table: {}'.format(
+                    'DryRun: ' if self.dryrun else '',
+                    table,
+                ), verbosity=2)
+
                 # output the structure
                 self.dump(database, table, structure=True, data=False)
 
@@ -53,12 +61,10 @@ class Bucket(Tool):
         self.collapse()
 
         # output the completion stats
-        self.write(
-            '\nBackup finished on {}\n'.format(
-                datetime.now().strftime('%-m/%-d/%Y %H:%M')
-            ),
-            verbosity=1
-        )
+        self.write('\n{}Backup finished on {}\n'.format(
+            'DryRun: ' if self.dryrun else '',
+            datetime.now().strftime('%-m/%-d/%Y %H:%M')
+        ), verbosity=1)
 
 
     def collapse(self):
@@ -80,29 +86,58 @@ class Bucket(Tool):
         success = True
         if self.encrypt_key:
             # encrypt the backup
+            self.write('{}Encrypting backup files into: {}'.format(
+                'DryRun: ' if self.dryrun else '',
+                filename,
+            ), verbosity=2)
             cmd += ' | gpg --output {} --encrypt --recipient {} > /dev/null'.format(  # NOQA
                 filename,
                 self.encrypt_key
             )
-            call(cmd, shell=True, cwd=self.backup_path)
+            if not self.dryrun:
+                call(cmd, shell=True, cwd=self.backup_path)
         else:
             # tar the backup files
-            try:
-                with open(filename, 'wb') as out_file:
-                    call(cmd, shell=True, stdout=out_file, cwd=self.backup_path)  # NOQA
-            except CalledProcessError:
-                success = False
+            self.write('{}Combine backup files into: {}'.format(
+                'DryRun: ' if self.dryrun else '',
+                filename
+            ), verbosity=2)
+            if not self.dryrun:
+                try:
+                    with open(filename, 'wb') as out_file:
+                        call(cmd, shell=True, stdout=out_file, cwd=self.backup_path)  # NOQA
+                except CalledProcessError:
+                    success = False
 
         if success:
             # fix the permissions on the backup file
-            call(['chmod', '440', filename])
+            self.write('{}    Set file permissions to: 440'.format(
+                'DryRun: ' if self.dryrun else '',
+            ), verbosity=3)
+            if not self.dryrun:
+                call(['chmod', '440', filename])
             if self.file_group is not None:
-                call(['chgrp', self.file_group, filename])
+                self.write('{}    Update the file group to: {}'.format(
+                    'DryRun: ' if self.dryrun else '',
+                    self.file_group,
+                ), verbosity=3)
+                if not self.dryrun:
+                    call(['chgrp', self.file_group, filename])
             if self.file_owner is not None:
-                call(['chown', self.file_owner, filename])
+                self.write('{}    Update the file owner to: {}'.format(
+                    'DryRun: ' if self.dryrun else '',
+                    self.file_owner,
+                ), verbosity=3)
+                if not self.dryrun:
+                    call(['chown', self.file_owner, filename])
 
             # delete the original backup directory
-            shutil.rmtree(self.backup_path)
+            self.write('{}Delete the backup folder: {}'.format(
+                'DryRun: ' if self.dryrun else '',
+                self.backup_path,
+            ), verbosity=2)
+            if not self.dryrun:
+                shutil.rmtree(self.backup_path)
 
 
     def create_backup_folder(self):
@@ -122,7 +157,12 @@ class Bucket(Tool):
             raise FileExistsError('Backup path ({}) already exists!'.format(
                 backup_path
             ))
-        os.makedirs(backup_path)
+        self.write('{}Create the backup folder: {}'.format(
+            'DryRun: ' if self.dryrun else '',
+            backup_path,
+        ), verbosity=3)
+        if not self.dryrun:
+            os.makedirs(backup_path)
         self.backup_path = backup_path
 
 
@@ -148,24 +188,34 @@ class Bucket(Tool):
         # create a path for the database files and ensure it exists
         path = os.path.join(self.backup_path, database)
         if not os.path.exists(path):
-            os.makedirs(path)
+            self.write('{}       Create database path: {}'.format(
+                'DryRun: ' if self.dryrun else '',
+                path,
+            ), verbosity=3)
+            if not self.dryrun:
+                os.makedirs(path)
 
-        # determine the filename extension to use
-        extension = 'sql'
+        # determine the filename to use
+        backup_content = ''
         if structure and not data:
-            extension = 'structure.sql'
+            backup_content = 'structure'
         elif not structure and data:
-            extension = 'data.sql'
-        filename = '{}_{}.{}'.format(
+            backup_content = 'data'
+        filename = '{}_{}.{}.sql'.format(
             self.today.strftime('%Y-%m-%d'),
             table,
-            extension
+            backup_content
         )
         filename = os.path.join(path, filename)
 
         cmd = '_dump_{}'.format(self.database_type)
         try:
-            getattr(self, cmd)(filename, database, table, structure, data)
+            self.write('{}       Writing {}'.format(
+                'DryRun: ' if self.dryrun else '',
+                backup_content,
+            ), verbosity=3)
+            if not self.dryrun:
+                getattr(self, cmd)(filename, database, table, structure, data)
         except AttributeError:
             raise NotImplementedError(
                 'Dump method ({}) for {} database is not '
