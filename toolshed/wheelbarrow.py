@@ -21,6 +21,7 @@ class Wheelbarrow(Tool):
         """
         self.backup_path = backup_path
         self.combined = options.get('combined', True)
+        self.dryrun = options.get('dryrun', False)
         self.file_group = options.get('file_group', None)
         self.file_owner = options.get('file_owner', None)
         self.plone_path = plone_path
@@ -30,20 +31,22 @@ class Wheelbarrow(Tool):
 
     def backup(self):
         """Backup the Plone data files"""
-        self.write(
-            'Plone backup for ({}) started on: {}\n'.format(
-                self.plone_path,
-                self.today.strftime("%-m/%-d/%Y %H:%M"),
-            ),
-            verbosity=1,
-        )
+        self.write('{}Plone backup for ({}) started on: {}\n'.format(
+            'DryRun: ' if self.dryrun else '',
+            self.plone_path,
+            self.today.strftime("%-m/%-d/%Y %H:%M"),
+        ), verbosity=1)
 
         # backup the data.fs file
-        self.write('Backing up the data.fs file', verbosity=1)
+        self.write('{}Backing up the data.fs file'.format(
+            'DryRun: ' if self.dryrun else '',
+        ), verbosity=1)
         self.copy_datafs()
 
         # backup the blob storage files
-        self.write('Backing up the blob storage', verbosity=1)
+        self.write('{}Backing up the blob storage'.format(
+            'DryRun: ' if self.dryrun else '',
+        ), verbosity=1)
         self.backup_blob_storage()
 
         date_str = self.today.strftime('%Y-%m-%d')
@@ -70,12 +73,10 @@ class Wheelbarrow(Tool):
                 call(['chown', self.file_owner, file])
 
         # output the completion stats
-        self.write(
-            '\nBackup finished on {}\n'.format(
-                datetime.now().strftime('%-m/%-d/%Y %H:%M')
-            ),
-            verbosity=1
-        )
+        self.write('\n{}Backup finished on {}\n'.format(
+            'DryRun: ' if self.dryrun else '',
+            datetime.now().strftime('%-m/%-d/%Y %H:%M'),
+        ), verbosity=1)
 
 
     def backup_blob_storage(self):
@@ -84,16 +85,26 @@ class Wheelbarrow(Tool):
             self.today.strftime('%Y-%m-%d'),
             '' if self.combined else '_blobstorage'
         )
+        filename = os.path.join(self.backup_path, filename)
         blob_path = os.path.join(self.plone_path, 'var', 'blobstorage')
         cmd = 'tar -cz .layout *'
         try:
-            with open(os.path.join(self.backup_path, filename), 'wb') as out_file:  # NOQA
-                call(cmd, shell=True, stdout=out_file, cwd=blob_path)
+            self.write('{}    tar the blob storage directory to: {}'.format(
+                'DryRun: ' if self.dryrun else '',
+                filename,
+            ), verbosity=3)
+            if not self.dryrun:
+                with open(filename, 'wb') as out_file:
+                    call(cmd, shell=True, stdout=out_file, cwd=blob_path)
         except CalledProcessError:
             pass
         else:
             if self.combined:
-                os.remove(os.path.join(blob_path, 'Data.fs'))
+                self.write('{}    Delete the Data.fs copy that was combined'.format(  # NOQA
+                    'DryRun: ' if self.dryrun else '',
+                ), verbosity=3)
+                if not self.dryrun:
+                    os.remove(os.path.join(blob_path, 'Data.fs'))
 
 
     def copy_datafs(self):
@@ -102,16 +113,24 @@ class Wheelbarrow(Tool):
         src_file = os.path.join(datafs_path, 'Data.fs')
         if self.combined:
             dest_file = os.path.join(self.plone_path, 'var', 'blobstorage', 'Data.fs')  # NOQA
-        if not self.combined:
+            self.write('{}    Copying Data.fs to blob storage for combined backup'.format(  # NOQA
+                'DryRun: ' if self.dryrun else '',
+            ), verbosity=3)
+        else:
             filename = '{}_data.fs'.format(self.today.strftime('%Y-%m-%d'))
             dest_file = os.path.join(self.backup_path, filename)
-        shutil.copyfile(src_file, dest_file)
+            self.write('{}    Copying Data.fs to: {}'.format(
+                'DryRun: ' if self.dryrun else '',
+                dest_file,
+            ), verbosity=3)
+        if not self.dryrun:
+            shutil.copyfile(src_file, dest_file)
 
 
 
 
 class Command(BaseCommand):
-    help = 'Database backup tool'
+    help = 'Plone data backup tool'
 
 
     def add_arguments(self, parser):
