@@ -1,8 +1,10 @@
+#!/usr/bin/env python
+
 from datetime import datetime
 from subprocess import call, CalledProcessError, check_output, STDOUT
 
 from toolshed.settings import *
-from toolshed.tool import Tool
+from toolshed.tool import BaseCommand, Tool
 
 import os
 import shutil
@@ -292,7 +294,77 @@ class Bucket(Tool):
 
 
 
+class Command(BaseCommand):
+    def add_arguments(self, parser):
+        """Define command arguments"""
+        # Positional arguments
+        parser.add_argument(
+            'backup_path',
+            action='store',
+            help='Path to store backup files',
+        )
+
+        # Optional arguments
+        parser.add_argument(
+            '-e', '--encryptkey',
+            action='store',
+            default=None,
+            dest='encrypt_key',
+            help='Encryption key used to encrypt the backup files',
+        )
+        parser.add_argument(
+            '-g', '--group',
+            action='store',
+            default=None,
+            dest='file_group',
+            help='Unix group who should own the backup files',
+        )
+        parser.add_argument(
+            '-h', '--host',
+            action='store',
+            default='localhost',
+            dest='db_host',
+            help='The database host to be backed up',
+        )
+        parser.add_argument(
+            '-o', '--owner',
+            action='store',
+            default=None,
+            dest='file_owner',
+            help='Unix user who should own the backup files',
+        )
+        parser.add_argument(
+            '-p', '--password',
+            action='store',
+            default=None,
+            dest='db_pass',
+            help="Used in conjunction with --user to specify "
+                 "the user's password",
+        )
+        parser.add_argument(
+            '-t', '--type',
+            action='store',
+            default='mysql',
+            dest='database_type',
+            help='Database type being backed up',
+        )
+        parser.add_argument(
+            '-u', '--user',
+            action='store',
+            default=None,
+            dest='db_user',
+            help='Database user to connect as',
+        )
+
+
+    def handle(self, *args, **options):
+        backup_path = options.pop('backup_path')
+        bucket = Bucket(backup_path, **options)
+        bucket.backup()
+
+
+
+
 if __name__ == '__main__':
-    ### TODO: implement argparse and a proper call to bucket.backup()
-    bucket = Bucket('./')
-    bucket.backup()
+    cmd = Command()
+    cmd.run_from_argv(sys.argv)
