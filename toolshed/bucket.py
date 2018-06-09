@@ -18,7 +18,7 @@ class Bucket(Tool):
         self.db_user = options.get('db_user', None)
         self.encrypt_key = options.get('encrypt_key', None)
         self.file_group = options.get('file_group', None)
-        self.file_user = options.get('file_user', None)
+        self.file_owner = options.get('file_owner', None)
         self.today = datetime.now()
         self.verbosity = options.get('verbosity', 1)
         self.set_tables(
@@ -96,8 +96,8 @@ class Bucket(Tool):
             call(['chmod', '440', filename])
             if self.file_group is not None:
                 call(['chgrp', self.file_group, filename])
-            if self.file_user is not None:
-                call(['chown', self.file_user, filename])
+            if self.file_owner is not None:
+                call(['chown', self.file_owner, filename])
 
             # delete the original backup directory
             shutil.rmtree(self.backup_path)
