@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-
 from collections import OrderedDict
 from datetime import datetime, timedelta
 
@@ -12,16 +10,22 @@ import sys
 
 
 class Shears(object):
-    def __init__(self, backup_path, file_extension, **options):
+    def __init__(self, backup_path, file_extensions, **options):
         """Backup file pruning tool
 
         Arguments:
-            backup_path {string} -- Path to store the backup files
-            file_extension {string} -- Path to the `zeocluster` folder
+            backup_path {string} -- Path where backup files are stored
+            file_extensions {list} -- List of file extensions of backup
+                                      files to prune
             **options {dict} -- additional pruning options
         """
         self.backup_path = backup_path
-        self.file_extension = file_extension.strip().replace('.', '')
+        self.dryrun = options.get('dryrun', False)
+        self.file_extensions = [
+            ext.strip().replace('.', '') for ext in file_extensions
+        ]
+        self.verbosity = options.get('verbosity', 1)
+
         self.backup_levels = OrderedDict()
         for level in ('daily', 'weekly', 'monthly', 'yearly'):
             try:
@@ -34,16 +38,23 @@ class Shears(object):
             }
 
 
-    def delete(self, filename, path):
+    def delete(self, filename, extension, path):
         """Delete existing backup file
 
         Arguments:
-            filename {string} -- backup filename without the extension
+            filename {string} -- Backup filename without the extension
                                  in the format YYYY-MM-DD
+            extension {string} -- Extension for the backup file
             path {string} -- Path to the backup file
         """
-        filename = "{}.{}".format(filename, self.file_extension)
-        os.remove(os.path.join(path, filename))
+        filename = "{}.{}".format(filename, extension)
+        filename = os.path.join(path, filename)
+        self.write('{}        Deleting {}'.format(
+            'DryRun: ' if self.dryrun else '',
+            filename,
+        ), verbosity=3)
+        if not self.dryrun:
+            os.remove(filename)
 
 
     def get_backup_date(self, filename):
@@ -105,46 +116,100 @@ class Shears(object):
         return False
 
 
-    def move(self, filename, path, new_path):
+    def move(self, filename, extension, path, new_path):
         """Move backup file to a new level
 
         Arguments:
-            filename {string} -- backup filename without the extension
+            filename {string} -- Backup filename without the extension
                                  in the format YYYY-MM-DD
+            extension {string} -- Extension for the backup file
             path {string} -- Path to the backup file
             new_path {string} -- Path where the backup file is going
         """
-        filename = "{}.{}".format(filename, self.file_extension)
+        filename = "{}.{}".format(filename, extension)
         src = os.path.join(path, filename)
         dest = os.path.join(new_path, filename)
-        os.rename(src, dest)
+        self.write('{}        Renaming {} to {}'.format(
+            'DryRun: ' if self.dryrun else '',
+            src,
+            dest,
+        ), verbosity=3)
+        if not self.dryrun:
+            os.rename(src, dest)
 
 
     def prune(self):
         """Starting point to prune backups at all levels"""
+        self.write('{}Pruning backups in ({}) started on: {}\n'.format(
+            'DryRun: ' if self.dryrun else '',
+            self.backup_path,
+            self.today.strftime("%-m/%-d/%Y %H:%M"),
+        ), verbosity=1)
+
         for level, details in self.backup_levels.items():
-            self.prune_level(level, details['path'], details['limit'])
+            for extension in self.file_extensions:
+                self.prune_level(
+                    extension,
+                    level,
+                    details['path'],
+                    details['limit']
+                )
+
+        # output the completion stats
+        self.write('\n{}Pruning finished on {}\n'.format(
+            'DryRun: ' if self.dryrun else '',
+            datetime.now().strftime('%-m/%-d/%Y %H:%M'),
+        ), verbosity=1)
 
 
-    def prune_level(self, level, path, limit):
+    def prune_level(self, file_extension, level, path, limit):
         """Prune the files at one backup level
 
         Arguments:
-            level {string} -- Backup level being processed
-            path {object} -- OS path to the files in the backup level
-            limit {integer} -- number of days worth of backups to keep
+            file_extension {string} -- Extension of backup files to prune
+            level {string} -- Backup level to process
+            path {object} -- Path to the files in the backup level
+            limit {integer} -- Number of days worth of backups to keep
                                for this backup level
         """
-        print("  pruning ./{}: {} max".format(level, limit))
+        self.write('{}    Prune {} *.{} files ({} max)'.format(
+            'DryRun: ' if self.dryrun else '',
+            level,
+            extension,
+            limit,
+        ), verbosity=1)
+
         # read the valid backup files from `path`
+        self.write('{}        Obtain the existing backup files'.format(
+            'DryRun: ' if self.dryrun else '',
+        ), verbosity=2)
         backup_files = []
         for item in os.listdir(path):
             if not os.path.isfile(os.path.join(path, item)):
+                self.write('{}            Skipping {}: not a file'.format(
+                    'DryRun: ' if self.dryrun else '',
+                    os.path.join(path, item),
+                ), verbosity=3)
                 continue
             filename, extension = item.rsplit('.', 1)
-            if extension != self.file_extension:
+            if extension != file_extension:
+                self.write('{}            Skipping {}: not *.{} file'.format(
+                    'DryRun: ' if self.dryrun else '',
+                    os.path.join(path, item),
+                    file_extension,
+                ), verbosity=3)
                 continue
-            if self.get_backup_date(filename) is not None:
+            if self.get_backup_date(filename) is None:
+                self.write('{}            Skipping {}: no date in filename'.format(  # NOQA
+                    'DryRun: ' if self.dryrun else '',
+                    os.path.join(path, item),
+                ), verbosity=3)
+                continue
+            else:
+                self.write('{}            Keeping {}'.format(
+                    'DryRun: ' if self.dryrun else '',
+                    os.path.join(path, item),
+                ), verbosity=3)
                 backup_files.append(filename)
 
         # identify the files to remove
@@ -160,29 +225,23 @@ class Shears(object):
             moved = False
             for new_level in levels[level_index + 1:]:
                 if self.is_end_of(new_level, backup_file):
-                    print("    moving {}/{} to {}".format(
-                        level, backup_file, new_level
-                    ))
+                    self.write('{}    Moving {}/{} to {}'.format(
+                        'DryRun: ' if self.dryrun else '',
+                        level,
+                        backup_file,
+                        new_level
+                    ), verbosity=1)
                     new_path = self.backup_levels[new_level]['path']
-                    self.move(backup_file, path, new_path)
+                    self.move(backup_file, file_extension, path, new_path)
                     moved = True
                     break
             if not moved:
-                print("    deleting {}/{}".format(level, backup_file))
-                self.delete(backup_file, path)
-
-
-    def strip_extension(self, filename):
-        """Remove the file extension from the filename
-
-        Arguments:
-            filename {string} -- backup filename in the format YYYY-MM-DD.bak
-
-        Returns:
-            {string} -- `filename` without `self.file_extension` on the end
-        """
-        file_ext = '.{}'.format(self.file_extension)
-        return filename.replace(file_ext, '')
+                self.write('{}    Removing {}/{}'.format(
+                    'DryRun: ' if self.dryrun else '',
+                    level,
+                    backup_file
+                ), verbosity=1)
+                self.delete(backup_file, file_extension, path)
 
 
 
@@ -202,14 +261,17 @@ class Command(BaseCommand):
         parser.add_argument(
             'extension',
             action='store',
-            help='File extension of the backup files to prune',
+            dest='extensions',
+            help='File extension of the backup files to prune '
+                 '(more than one can be specified)',
+            nargs='+',
         )
 
 
     def handle(self, *args, **options):
         backup_path = options.pop('backup_path')
-        extension = options.pop('extension')
-        shears = Shears(backup_path, extension, **options)
+        extensions = options.pop('extensions')
+        shears = Shears(backup_path, extensions, **options)
         try:
             shears.prune()
         except (ValueError,) as e:
