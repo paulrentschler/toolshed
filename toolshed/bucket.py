@@ -7,6 +7,7 @@ from toolshed.tool import BaseCommand, CommandError, Tool
 
 import os
 import shutil
+import sys
 
 
 class Bucket(Tool):
