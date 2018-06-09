@@ -19,7 +19,7 @@ class Wheelbarrow(Tool):
         self.backup_path = backup_path
         self.combined = options.get('combined', True)
         self.file_group = options.get('file_group', None)
-        self.file_user = options.get('file_user', None)
+        self.file_owner = options.get('file_owner', None)
         self.plone_path = plone_path
         self.today = datetime.now()
         self.verbosity = options.get('verbosity', 1)
@@ -62,9 +62,9 @@ class Wheelbarrow(Tool):
         if self.file_group is not None:
             for file in files:
                 call(['chgrp', self.file_group, file])
-        if self.file_user is not None:
+        if self.file_owner is not None:
             for file in files:
-                call(['chown', self.file_user, file])
+                call(['chown', self.file_owner, file])
 
         # output the completion stats
         self.write(
