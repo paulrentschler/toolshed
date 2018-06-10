@@ -68,7 +68,7 @@ class TestShears(unittest.TestCase):
             shutil.rmtree(self.tmp_path, ignore_errors=True)
 
 
-    def test_everything(self):
+    def test_default(self):
         """Prune nine months of files that span the end of the year
 
         Takes nine months worth of files, spanning from 15 Nov 2017 till
@@ -125,6 +125,222 @@ class TestShears(unittest.TestCase):
         self.assertListEqual(
             sorted(os.listdir(os.path.join(self.tmp_path, 'yearly'))),
             ['2017-12-31_test_backup.bak', ],
+            msg='Yearly files do not match the expected files'
+        )
+
+
+    def test_shorter_limits(self):
+        """Prune nine months of files that span the end of the year
+
+        Takes nine months worth of files, spanning from 15 Nov 2017 till
+        16 Aug 2018, and prunes them into daily, weekly, monthly, and
+        yearly directories with non-default limits on the number of files:
+            daily: 20
+            weekly: 4
+            monthly: 3
+            yearly: 2
+        """
+        self.create_files(date(2017, 11, 15), 275, '.bak', 'test_backup')
+        shears = Shears(
+            self.tmp_path,
+            ['.bak', ],
+            verbosity=0,
+            daily=20,
+            weekly=4,
+            monthly=3,
+            yearly=2,
+        )
+        shears.prune()
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'daily'))),
+            [
+                '2018-07-28_test_backup.bak',
+                '2018-07-29_test_backup.bak',
+                '2018-07-30_test_backup.bak',
+                '2018-07-31_test_backup.bak',
+                '2018-08-01_test_backup.bak',
+                '2018-08-02_test_backup.bak',
+                '2018-08-03_test_backup.bak',
+                '2018-08-04_test_backup.bak',
+                '2018-08-05_test_backup.bak',
+                '2018-08-06_test_backup.bak',
+                '2018-08-07_test_backup.bak',
+                '2018-08-08_test_backup.bak',
+                '2018-08-09_test_backup.bak',
+                '2018-08-10_test_backup.bak',
+                '2018-08-11_test_backup.bak',
+                '2018-08-12_test_backup.bak',
+                '2018-08-13_test_backup.bak',
+                '2018-08-14_test_backup.bak',
+                '2018-08-15_test_backup.bak',
+                '2018-08-16_test_backup.bak',
+            ],
+            msg='Daily files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'weekly'))),
+            [
+                '2018-06-30_test_backup.bak',
+                '2018-07-07_test_backup.bak',
+                '2018-07-14_test_backup.bak',
+                '2018-07-21_test_backup.bak',
+            ],
+            msg='Weekly files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'monthly'))),
+            [
+                '2018-03-31_test_backup.bak',
+                '2018-04-30_test_backup.bak',
+                '2018-05-31_test_backup.bak',
+            ],
+            msg='Monthly files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'yearly'))),
+            ['2017-12-31_test_backup.bak', ],
+            msg='Yearly files do not match the expected files'
+        )
+
+
+    def test_daily_weekly_only(self):
+        """Prune nine months of files that span the end of the year
+
+        Takes nine months worth of files, spanning from 15 Nov 2017 till
+        16 Aug 2018, and prunes them into daily and weekly directories.
+        """
+        self.create_files(date(2017, 11, 15), 275, '.bak', 'test_backup')
+        shears = Shears(
+            self.tmp_path,
+            ['.bak', ],
+            verbosity=0,
+            monthly=0,
+            yearly=0,
+        )
+        shears.prune()
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'daily'))),
+            [
+                '2018-08-03_test_backup.bak',
+                '2018-08-04_test_backup.bak',
+                '2018-08-05_test_backup.bak',
+                '2018-08-06_test_backup.bak',
+                '2018-08-07_test_backup.bak',
+                '2018-08-08_test_backup.bak',
+                '2018-08-09_test_backup.bak',
+                '2018-08-10_test_backup.bak',
+                '2018-08-11_test_backup.bak',
+                '2018-08-12_test_backup.bak',
+                '2018-08-13_test_backup.bak',
+                '2018-08-14_test_backup.bak',
+                '2018-08-15_test_backup.bak',
+                '2018-08-16_test_backup.bak',
+            ],
+            msg='Daily files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'weekly'))),
+            [
+                '2018-06-23_test_backup.bak',
+                '2018-06-30_test_backup.bak',
+                '2018-07-07_test_backup.bak',
+                '2018-07-14_test_backup.bak',
+                '2018-07-21_test_backup.bak',
+                '2018-07-28_test_backup.bak',
+            ],
+            msg='Weekly files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'monthly'))),
+            [],
+            msg='Monthly files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'yearly'))),
+            [],
+            msg='Yearly files do not match the expected files'
+        )
+
+
+    def test_multiple_extensions(self):
+        """Prune nine months of files with three different extensions
+
+        Takes nine months worth of files with three different extensions,
+        spanning from 15 Nov 2017 till 16 Aug 2018, and prunes them into
+        daily, weekly, monthly, and yearly directories with less than the
+        default limits for each level.
+        """
+        self.create_files(date(2017, 11, 15), 275, '.backup', 'test_backup')
+        self.create_files(date(2017, 11, 15), 275, '.bak', 'test_backup')
+        self.create_files(date(2017, 11, 15), 275, '.tmp', 'test_backup')
+        shears = Shears(
+            self.tmp_path,
+            ['backup', '.bak', 'tmp'],
+            verbosity=0,
+            daily=7,
+            weekly=2,
+            monthly=2,
+            yearly=2,
+        )
+        shears.prune()
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'daily'))),
+            [
+                '2018-08-10_test_backup.backup',
+                '2018-08-10_test_backup.bak',
+                '2018-08-10_test_backup.tmp',
+                '2018-08-11_test_backup.backup',
+                '2018-08-11_test_backup.bak',
+                '2018-08-11_test_backup.tmp',
+                '2018-08-12_test_backup.backup',
+                '2018-08-12_test_backup.bak',
+                '2018-08-12_test_backup.tmp',
+                '2018-08-13_test_backup.backup',
+                '2018-08-13_test_backup.bak',
+                '2018-08-13_test_backup.tmp',
+                '2018-08-14_test_backup.backup',
+                '2018-08-14_test_backup.bak',
+                '2018-08-14_test_backup.tmp',
+                '2018-08-15_test_backup.backup',
+                '2018-08-15_test_backup.bak',
+                '2018-08-15_test_backup.tmp',
+                '2018-08-16_test_backup.backup',
+                '2018-08-16_test_backup.bak',
+                '2018-08-16_test_backup.tmp',
+            ],
+            msg='Daily files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'weekly'))),
+            [
+                '2018-07-28_test_backup.backup',
+                '2018-07-28_test_backup.bak',
+                '2018-07-28_test_backup.tmp',
+                '2018-08-04_test_backup.backup',
+                '2018-08-04_test_backup.bak',
+                '2018-08-04_test_backup.tmp',
+            ],
+            msg='Weekly files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'monthly'))),
+            [
+                '2018-06-30_test_backup.backup',
+                '2018-06-30_test_backup.bak',
+                '2018-06-30_test_backup.tmp',
+                '2018-07-31_test_backup.backup',
+                '2018-07-31_test_backup.bak',
+                '2018-07-31_test_backup.tmp',
+            ],
+            msg='Monthly files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'yearly'))),
+            [
+                '2017-12-31_test_backup.backup',
+                '2017-12-31_test_backup.bak',
+                '2017-12-31_test_backup.tmp',
+            ],
             msg='Yearly files do not match the expected files'
         )
 
