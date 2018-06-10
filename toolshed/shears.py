@@ -25,7 +25,18 @@ class Shears(Tool):
         self.file_extensions = [
             ext.strip().replace('.', '') for ext in file_extensions
         ]
+        self.today = datetime.now()
         self.verbosity = options.get('verbosity', 1)
+
+        # set default level options
+        if 'daily' not in options.keys():
+            options['daily'] = 14
+        if 'weekly' not in options.keys():
+            options['weekly'] = 6
+        if 'monthly' not in options.keys():
+            options['monthly'] = 6
+        if 'yearly' not in options.keys():
+            options['yearly'] = 6
 
         # set the backup levels, max files, and paths
         for level in ('daily', 'weekly', 'monthly', 'yearly'):
