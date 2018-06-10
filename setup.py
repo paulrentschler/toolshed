@@ -11,7 +11,7 @@ setup(
         # "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python",
     ],
-    keywords='backups pruning data archives MySQL Python',
+    keywords='backups pruning data archives MySQL Plone Python',
     author='Paul Rentschler',
     author_email='paul@rentschler.ws',
     url='https://github.com/paulrentschler/toolshed',
