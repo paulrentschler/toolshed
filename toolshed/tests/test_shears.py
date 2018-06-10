@@ -76,7 +76,7 @@ class TestShears(unittest.TestCase):
         yearly directories.
         """
         self.create_files(date(2017, 11, 15), 275, '.bak', 'test_backup')
-        shears = Shears(self.tmp_path, '.bak')
+        shears = Shears(self.tmp_path, ['.bak', ], verbosity=3)
         shears.prune()
         self.assertListEqual(
             sorted(os.listdir(os.path.join(self.tmp_path, 'daily'))),
