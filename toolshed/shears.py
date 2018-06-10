@@ -186,7 +186,7 @@ class Shears(Tool):
             limit {integer} -- Number of days worth of backups to keep
                                for this backup level
         """
-        self.write('{}    Prune {} *.{} files ({} max)'.format(
+        self.write('{}Prune {} *.{} files ({} max)'.format(
             'DryRun: ' if self.dryrun else '',
             level,
             file_extension,
@@ -194,33 +194,33 @@ class Shears(Tool):
         ), verbosity=1)
 
         # read the valid backup files from `path`
-        self.write('{}        Obtain the existing backup files'.format(
+        self.write('{}    Obtain the existing backup files'.format(
             'DryRun: ' if self.dryrun else '',
         ), verbosity=2)
         backup_files = []
         for item in os.listdir(path):
             if not os.path.isfile(os.path.join(path, item)):
-                self.write('{}            Skipping {}: not a file'.format(
+                self.write('{}        Skipping {}: not a file'.format(
                     'DryRun: ' if self.dryrun else '',
                     os.path.join(path, item),
                 ), verbosity=3)
                 continue
             filename, extension = item.rsplit('.', 1)
             if extension != file_extension:
-                self.write('{}            Skipping {}: not *.{} file'.format(
+                self.write('{}        Skipping {}: not *.{} file'.format(
                     'DryRun: ' if self.dryrun else '',
                     os.path.join(path, item),
                     file_extension,
                 ), verbosity=3)
                 continue
             if self.get_backup_date(filename) is None:
-                self.write('{}            Skipping {}: no date in filename'.format(  # NOQA
+                self.write('{}        Skipping {}: no date in filename'.format(  # NOQA
                     'DryRun: ' if self.dryrun else '',
                     os.path.join(path, item),
                 ), verbosity=3)
                 continue
             else:
-                self.write('{}            Keeping {}'.format(
+                self.write('{}        Keeping {}'.format(
                     'DryRun: ' if self.dryrun else '',
                     os.path.join(path, item),
                 ), verbosity=3)
