@@ -339,6 +339,10 @@ class TestBucket(unittest.TestCase):
         bucket = Bucket('./')
         bucket.set_tables(None, None)
         self.assertTrue(
+            len(bucket.tables_exclude.keys()) == 0,
+            msg='Excluded tables list is not empty'
+        )
+        self.assertTrue(
             len(bucket.tables.keys()) >= 2,
             msg='Tables list does not include at least two databases'
         )
@@ -433,16 +437,38 @@ class TestBucket(unittest.TestCase):
         bucket = Bucket('./')
         bucket.set_tables(None, ['information_schema.*', 'mysql.slow_log'])
         self.assertTrue(
-            len(bucket.tables.keys()) >= 1,
-            msg='Tables list does not include at least one database'
+            len(bucket.tables_exclude.keys()) == 2,
+            msg='Excluded tables list does not include two databases'
         )
-        self.assertFalse(
+        self.assertTrue(
+            'information_schema' in bucket.tables_exclude.keys(),
+            msg='"information_schema" database is not in excluded list'
+        )
+        self.assertListEqual(
+            bucket.tables_exclude['information_schema'],
+            [],
+            msg='"information_schema" database is not completely excluded'
+        )
+        self.assertTrue(
+            'mysql' in bucket.tables_exclude.keys(),
+            msg='"mysql" database is not in excluded list'
+        )
+        self.assertListEqual(
+            bucket.tables_exclude['mysql'],
+            ['slow_log', ],
+            msg='"slow_log" table is not the only table excluded'
+        )
+        self.assertTrue(
+            len(bucket.tables.keys()) >= 2,
+            msg='Tables list does not include at least two databasees'
+        )
+        self.assertTrue(
             'information_schema' in bucket.tables.keys(),
-            msg='"information_schema" database is not excluded'
+            msg='"information_schema" database is not included'
         )
         self.assertTrue(
             'mysql' in bucket.tables.keys(),
-            msg='"mysql" database not included'
+            msg='"mysql" database is not included'
         )
         self.assertListEqual(
             sorted(bucket.tables['mysql']),
@@ -463,6 +489,7 @@ class TestBucket(unittest.TestCase):
                 'procs_priv',
                 'proxies_priv',
                 'servers',
+                'slow_log',
                 'tables_priv',
                 'time_zone',
                 'time_zone_leap_second',
@@ -479,6 +506,10 @@ class TestBucket(unittest.TestCase):
         """Ensure Bucket.set_tables() only includes specified tables"""
         bucket = Bucket('./')
         bucket.set_tables(['mysql.db', 'mysql.host', 'mysql.user'], None)
+        self.assertTrue(
+            len(bucket.tables_exclude.keys()) == 0,
+            msg='Excluded tables list is not'
+        )
         self.assertTrue(
             len(bucket.tables.keys()) == 1,
             msg='Tables list does not include exactly one database'
