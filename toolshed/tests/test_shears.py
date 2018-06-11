@@ -345,5 +345,114 @@ class TestShears(unittest.TestCase):
         )
 
 
+    def test_daily_monthly_only(self):
+        """Prune nine months of files that span the end of the year
+
+        Takes nine months worth of files, spanning from 15 Nov 2017 till
+        16 Aug 2018, and prunes them into daily and monthly directories.
+        """
+        self.create_files(date(2017, 11, 15), 275, '.bak', 'test_backup')
+        shears = Shears(
+            self.tmp_path,
+            ['.bak', ],
+            verbosity=0,
+            daily=14,
+            weekly=0,
+            monthly=6,
+            yearly=0,
+        )
+        shears.prune()
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'daily'))),
+            [
+                '2018-08-03_test_backup.bak',
+                '2018-08-04_test_backup.bak',
+                '2018-08-05_test_backup.bak',
+                '2018-08-06_test_backup.bak',
+                '2018-08-07_test_backup.bak',
+                '2018-08-08_test_backup.bak',
+                '2018-08-09_test_backup.bak',
+                '2018-08-10_test_backup.bak',
+                '2018-08-11_test_backup.bak',
+                '2018-08-12_test_backup.bak',
+                '2018-08-13_test_backup.bak',
+                '2018-08-14_test_backup.bak',
+                '2018-08-15_test_backup.bak',
+                '2018-08-16_test_backup.bak',
+            ],
+            msg='Daily files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'weekly'))),
+            [],
+            msg='Weekly files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'monthly'))),
+            [
+                '2018-02-28_test_backup.bak',
+                '2018-03-31_test_backup.bak',
+                '2018-04-30_test_backup.bak',
+                '2018-05-31_test_backup.bak',
+                '2018-06-30_test_backup.bak',
+                '2018-07-31_test_backup.bak',
+            ],
+            msg='Monthly files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'yearly'))),
+            [],
+            msg='Yearly files do not match the expected files'
+        )
+
+
+    def test_monthly_only(self):
+        """Prune nine months of files that span the end of the year
+
+        Takes nine months worth of files, spanning from 15 Nov 2017 till
+        16 Aug 2018, and prunes them into monthly directories.
+        """
+        self.create_files(date(2017, 11, 15), 275, '.bak', 'test_backup')
+        shears = Shears(
+            self.tmp_path,
+            ['.bak', ],
+            verbosity=0,
+            daily=0,
+            weekly=0,
+            monthly=6,
+            yearly=0,
+        )
+        shears.prune()
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'daily'))),
+            [],
+            msg='Daily files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'weekly'))),
+            [],
+            msg='Weekly files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'monthly'))),
+            [
+                '2018-02-28_test_backup.bak',
+                '2018-03-31_test_backup.bak',
+                '2018-04-30_test_backup.bak',
+                '2018-05-31_test_backup.bak',
+                '2018-06-30_test_backup.bak',
+                '2018-07-31_test_backup.bak',
+            ],
+            msg='Monthly files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'yearly'))),
+            [],
+            msg='Yearly files do not match the expected files'
+        )
+
+
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -44,8 +44,6 @@ class Shears(Tool):
                 days = options.get(level, 0)
             except KeyError:
                 continue
-            if days == 0:
-                continue
             self.backup_levels[level] = {
                 'limit': days,
                 'path': os.path.join(self.backup_path, level),
