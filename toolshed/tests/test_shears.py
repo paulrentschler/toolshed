@@ -452,6 +452,32 @@ class TestShears(unittest.TestCase):
         )
 
 
+    def test_limit_only(self):
+        """Prune 10 files down to 6"""
+        self.create_files(date(2017, 11, 15), 10, '.bak', 'test_backup')
+        for item in os.listdir(os.path.join(self.tmp_path, 'daily')):
+            src = os.path.join(self.tmp_path, 'daily', item)
+            dest = os.path.join(self.tmp_path, item)
+            os.rename(src, dest)
+        for folder in ['daily', 'weekly', 'monthly', 'yearly']:
+            shutil.rmtree(os.path.join(self.tmp_path, folder), ignore_errors=True)  # NOQA
+
+        shears = Shears(self.tmp_path, ['.bak', ], verbosity=0, limit=6)
+        shears.prune()
+        self.assertListEqual(
+            sorted(os.listdir(self.tmp_path)),
+            [
+                '2017-11-19_test_backup.bak',
+                '2017-11-20_test_backup.bak',
+                '2017-11-21_test_backup.bak',
+                '2017-11-22_test_backup.bak',
+                '2017-11-23_test_backup.bak',
+                '2017-11-24_test_backup.bak',
+            ],
+            msg='Remaining files do not match the expected files'
+        )
+
+
 
 
 if __name__ == '__main__':

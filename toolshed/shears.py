@@ -25,6 +25,7 @@ class Shears(Tool):
         self.file_extensions = [
             ext.strip().replace('.', '') for ext in file_extensions
         ]
+        self.limit = options.get('limit', None)
         self.today = datetime.now()
         self.verbosity = options.get('verbosity', 1)
 
@@ -98,6 +99,51 @@ class Shears(Tool):
             return None
 
 
+    def get_directory_files(self, path, file_extension):
+        """Return sorted list of files in `path` with `file_extension`
+
+        Arguments:
+            path {object} -- Path to the files in the backup level
+            file_extension {string} -- Extension of backup files to prune
+
+        Returns:
+            list -- List of storted files in the path
+        """
+        self.write('{}    Obtain the existing backup files'.format(
+            'DryRun: ' if self.dryrun else '',
+        ), verbosity=2)
+        files = []
+        for item in os.listdir(path):
+            if not os.path.isfile(os.path.join(path, item)):
+                self.write('{}        Skipping {}: not a file'.format(
+                    'DryRun: ' if self.dryrun else '',
+                    os.path.join(path, item),
+                ), verbosity=3)
+                continue
+            filename, extension = item.rsplit('.', 1)
+            if extension != file_extension:
+                self.write('{}        Skipping {}: not *.{} file'.format(
+                    'DryRun: ' if self.dryrun else '',
+                    os.path.join(path, item),
+                    file_extension,
+                ), verbosity=3)
+                continue
+            if self.get_backup_date(filename) is None:
+                self.write('{}        Skipping {}: no date in filename'.format(  # NOQA
+                    'DryRun: ' if self.dryrun else '',
+                    os.path.join(path, item),
+                ), verbosity=3)
+                continue
+            else:
+                self.write('{}        Keeping {}'.format(
+                    'DryRun: ' if self.dryrun else '',
+                    os.path.join(path, item),
+                ), verbosity=3)
+                files.append(filename)
+        files.sort()
+        return files
+
+
     def is_end_of(self, timeframe, filename):
         """Is the `filename` at the end of the `timeframe`
 
@@ -158,14 +204,18 @@ class Shears(Tool):
             self.today.strftime("%-m/%-d/%Y %H:%M"),
         ), verbosity=1)
 
-        for level, details in self.backup_levels.items():
+        if self.limit is not None:
             for extension in self.file_extensions:
-                self.prune_level(
-                    extension,
-                    level,
-                    details['path'],
-                    details['limit']
-                )
+                self.prune_limit(extension, self.backup_path, self.limit)
+        else:
+            for level, details in self.backup_levels.items():
+                for extension in self.file_extensions:
+                    self.prune_level(
+                        extension,
+                        level,
+                        details['path'],
+                        details['limit']
+                    )
 
         # output the completion stats
         self.write('\n{}Pruning finished on {}\n'.format(
@@ -192,40 +242,9 @@ class Shears(Tool):
         ), verbosity=1)
 
         # read the valid backup files from `path`
-        self.write('{}    Obtain the existing backup files'.format(
-            'DryRun: ' if self.dryrun else '',
-        ), verbosity=2)
-        backup_files = []
-        for item in os.listdir(path):
-            if not os.path.isfile(os.path.join(path, item)):
-                self.write('{}        Skipping {}: not a file'.format(
-                    'DryRun: ' if self.dryrun else '',
-                    os.path.join(path, item),
-                ), verbosity=3)
-                continue
-            filename, extension = item.rsplit('.', 1)
-            if extension != file_extension:
-                self.write('{}        Skipping {}: not *.{} file'.format(
-                    'DryRun: ' if self.dryrun else '',
-                    os.path.join(path, item),
-                    file_extension,
-                ), verbosity=3)
-                continue
-            if self.get_backup_date(filename) is None:
-                self.write('{}        Skipping {}: no date in filename'.format(  # NOQA
-                    'DryRun: ' if self.dryrun else '',
-                    os.path.join(path, item),
-                ), verbosity=3)
-                continue
-            else:
-                self.write('{}        Keeping {}'.format(
-                    'DryRun: ' if self.dryrun else '',
-                    os.path.join(path, item),
-                ), verbosity=3)
-                backup_files.append(filename)
+        backup_files = self.get_directory_files(path, file_extension)
 
         # identify the files to remove
-        backup_files.sort()
         remove_files = []
         while len(backup_files) > limit:
             remove_files.append(backup_files.pop(0))
@@ -254,6 +273,37 @@ class Shears(Tool):
                     backup_file
                 ), verbosity=1)
                 self.delete(backup_file, file_extension, path)
+
+
+    def prune_limit(self, file_extension, path, limit):
+        """Prune the `file_extension` files in `path` to `limit` files
+
+        Arguments:
+            file_extension {string} -- Extension of backup files to prune
+            path {object} -- Path to the files to prune
+            limit {integer} -- Number of files to keep
+        """
+        self.write('{}Prune *.{} files ({} max)'.format(
+            'DryRun: ' if self.dryrun else '',
+            file_extension,
+            limit,
+        ), verbosity=1)
+
+        # read the valid backup files from `path`
+        backup_files = self.get_directory_files(path, file_extension)
+
+        # identify the files to remove
+        remove_files = []
+        while len(backup_files) > limit:
+            remove_files.append(backup_files.pop(0))
+
+        # remove the files
+        for backup_file in remove_files:
+            self.write('{}    Removing {}'.format(
+                'DryRun: ' if self.dryrun else '',
+                backup_file
+            ), verbosity=1)
+            self.delete(backup_file, file_extension, path)
 
 
 
@@ -307,6 +357,13 @@ class Command(BaseCommand):
             default=6,
             dest='yearly',
             help='Number of yearly backups to keep (0 if no yearly backups)',
+        )
+        parser.add_argument(
+            '--limit',
+            action='store',
+            default=None,
+            dest='limit',
+            help='Number of files to keep in the backup path (no levels)',
         )
 
 
