@@ -335,6 +335,7 @@ class Command(BaseCommand):
             default=14,
             dest='daily',
             help='Number of daily backups to keep (0 if no daily backups)',
+            type=int,
         )
         parser.add_argument(
             '--weekly',
@@ -342,6 +343,7 @@ class Command(BaseCommand):
             default=6,
             dest='weekly',
             help='Number of weekly backups to keep (0 if no weekly backups)',
+            type=int,
         )
         parser.add_argument(
             '--monthly',
@@ -349,6 +351,7 @@ class Command(BaseCommand):
             default=6,
             dest='monthly',
             help='Number of monthly backups to keep (0 if no monthly backups)',
+            type=int,
         )
         parser.add_argument(
             '--yearly',
@@ -356,6 +359,7 @@ class Command(BaseCommand):
             default=6,
             dest='yearly',
             help='Number of yearly backups to keep (0 if no yearly backups)',
+            type=int,
         )
         parser.add_argument(
             '--limit',
@@ -363,6 +367,7 @@ class Command(BaseCommand):
             default=None,
             dest='limit',
             help='Number of files to keep in the backup path (no levels)',
+            type=int,
         )
 
 
