@@ -67,10 +67,10 @@ class BaseCommand(object):
         pass
 
 
-    def create_parser(self, prog_name, subcommand):
+    def create_parser(self, prog_name):
         """Create and return the `ArgumentParser` to parse arguments"""
         parser = ArgumentParser(
-            prog='%s %s' % (os.path.basename(prog_name), subcommand),
+            prog=os.path.basename(prog_name),
             description=self.help or None,
         )
         parser.add_argument(
@@ -172,8 +172,8 @@ class BaseCommand(object):
         or the raised `Exception` is not `CommandError`, raise it.
         """
         self._called_from_command_line = True
-        parser = self.create_parser(argv[0], argv[1])
-        options = parser.parse_args(argv[2:])
+        parser = self.create_parser(argv[0])
+        options = parser.parse_args(argv[1:])
         cmd_options = vars(options)
 
         # Move positional args out of options to mimic legacy optparse
