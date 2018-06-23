@@ -270,12 +270,12 @@ class TestShears(unittest.TestCase):
         daily, weekly, monthly, and yearly directories with less than the
         default limits for each level.
         """
-        self.create_files(date(2017, 11, 15), 275, '.backup', 'test_backup')
-        self.create_files(date(2017, 11, 15), 275, '.bak', 'test_backup')
+        self.create_files(date(2017, 11, 15), 275, '.back.up', 'test_backup')
+        self.create_files(date(2017, 11, 15), 275, '.tmp.bak', 'test_backup')
         self.create_files(date(2017, 11, 15), 275, '.tmp', 'test_backup')
         shears = Shears(
             self.tmp_path,
-            ['backup', '.bak', 'tmp'],
+            ['.up', '.bak', 'tmp'],
             verbosity=0,
             daily=7,
             weekly=2,
@@ -286,60 +286,60 @@ class TestShears(unittest.TestCase):
         self.assertListEqual(
             sorted(os.listdir(os.path.join(self.tmp_path, 'daily'))),
             [
-                '2018-08-10_test_backup.backup',
-                '2018-08-10_test_backup.bak',
+                '2018-08-10_test_backup.back.up',
                 '2018-08-10_test_backup.tmp',
-                '2018-08-11_test_backup.backup',
-                '2018-08-11_test_backup.bak',
+                '2018-08-10_test_backup.tmp.bak',
+                '2018-08-11_test_backup.back.up',
                 '2018-08-11_test_backup.tmp',
-                '2018-08-12_test_backup.backup',
-                '2018-08-12_test_backup.bak',
+                '2018-08-11_test_backup.tmp.bak',
+                '2018-08-12_test_backup.back.up',
                 '2018-08-12_test_backup.tmp',
-                '2018-08-13_test_backup.backup',
-                '2018-08-13_test_backup.bak',
+                '2018-08-12_test_backup.tmp.bak',
+                '2018-08-13_test_backup.back.up',
                 '2018-08-13_test_backup.tmp',
-                '2018-08-14_test_backup.backup',
-                '2018-08-14_test_backup.bak',
+                '2018-08-13_test_backup.tmp.bak',
+                '2018-08-14_test_backup.back.up',
                 '2018-08-14_test_backup.tmp',
-                '2018-08-15_test_backup.backup',
-                '2018-08-15_test_backup.bak',
+                '2018-08-14_test_backup.tmp.bak',
+                '2018-08-15_test_backup.back.up',
                 '2018-08-15_test_backup.tmp',
-                '2018-08-16_test_backup.backup',
-                '2018-08-16_test_backup.bak',
+                '2018-08-15_test_backup.tmp.bak',
+                '2018-08-16_test_backup.back.up',
                 '2018-08-16_test_backup.tmp',
+                '2018-08-16_test_backup.tmp.bak',
             ],
             msg='Daily files do not match the expected files'
         )
         self.assertListEqual(
             sorted(os.listdir(os.path.join(self.tmp_path, 'weekly'))),
             [
-                '2018-07-28_test_backup.backup',
-                '2018-07-28_test_backup.bak',
+                '2018-07-28_test_backup.back.up',
                 '2018-07-28_test_backup.tmp',
-                '2018-08-04_test_backup.backup',
-                '2018-08-04_test_backup.bak',
+                '2018-07-28_test_backup.tmp.bak',
+                '2018-08-04_test_backup.back.up',
                 '2018-08-04_test_backup.tmp',
+                '2018-08-04_test_backup.tmp.bak',
             ],
             msg='Weekly files do not match the expected files'
         )
         self.assertListEqual(
             sorted(os.listdir(os.path.join(self.tmp_path, 'monthly'))),
             [
-                '2018-06-30_test_backup.backup',
-                '2018-06-30_test_backup.bak',
+                '2018-06-30_test_backup.back.up',
                 '2018-06-30_test_backup.tmp',
-                '2018-07-31_test_backup.backup',
-                '2018-07-31_test_backup.bak',
+                '2018-06-30_test_backup.tmp.bak',
+                '2018-07-31_test_backup.back.up',
                 '2018-07-31_test_backup.tmp',
+                '2018-07-31_test_backup.tmp.bak',
             ],
             msg='Monthly files do not match the expected files'
         )
         self.assertListEqual(
             sorted(os.listdir(os.path.join(self.tmp_path, 'yearly'))),
             [
-                '2017-12-31_test_backup.backup',
-                '2017-12-31_test_backup.bak',
+                '2017-12-31_test_backup.back.up',
                 '2017-12-31_test_backup.tmp',
+                '2017-12-31_test_backup.tmp.bak',
             ],
             msg='Yearly files do not match the expected files'
         )
