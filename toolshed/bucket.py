@@ -389,11 +389,11 @@ class Command(BaseCommand):
             help='Unix group who should own the backup files',
         )
         parser.add_argument(
-            '-h', '--host',
+            '--host',
             action='store',
             default='localhost',
             dest='db_host',
-            help='The database host to be backed up',
+            help='The database host to be backed up (default: localhost)',
         )
         parser.add_argument(
             '--include',
@@ -424,7 +424,7 @@ class Command(BaseCommand):
             action='store',
             default='mysql',
             dest='database_type',
-            help='Database type being backed up',
+            help='Database type being backed up (default: mysql)',
         )
         parser.add_argument(
             '-u', '--user',
