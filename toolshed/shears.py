@@ -323,7 +323,6 @@ class Command(BaseCommand):
         parser.add_argument(
             'extension',
             action='store',
-            dest='extensions',
             help='File extension of the backup files to prune '
                  '(more than one can be specified)',
             nargs='+',
@@ -369,7 +368,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         backup_path = options.pop('backup_path')
-        extensions = options.pop('extensions')
+        extensions = options.pop('extension')
         shears = Shears(backup_path, extensions, **options)
         try:
             shears.prune()
