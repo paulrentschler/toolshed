@@ -104,3 +104,5 @@ ENV/
 .*.py
 ._*
 
+# Application specific
+scripts/*
