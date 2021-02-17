@@ -3,7 +3,7 @@
 from collections import OrderedDict
 from datetime import datetime, timedelta
 
-from toolshed.tool import BaseCommand, CommandError, Tool
+from tool import BaseCommand, CommandError, Tool
 
 import os
 import sys
