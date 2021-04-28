@@ -226,15 +226,17 @@ class Bucket(Tool):
                                 (default: {False})
             data {bool} -- Dump the database table data (default: {False})
         """
+        err_filename = os.path.join(self.backup_path, 'errors.log')
         cmd = ['mysqldump', ] + self.cmd_auth + ['--skip-opt', ]
         if not structure:
             cmd.append('-t')
         if not data:
             cmd.append('-d')
         cmd += [database, table]
-        with open(filename, 'wb') as dump_file:
-            call(cmd, stdout=dump_file)
-
+        with open(filename, 'wb') as dump_file, open(err_filename, 'wb') as err_file:  # NOQA
+            call(cmd, stdout=dump_file, stderr=err_file)
+        if os.path.exists(err_filename):
+            os.remove(err_filename)
 
     def get_tables(self):
         """Database agnostic method to get all the databases/tables
