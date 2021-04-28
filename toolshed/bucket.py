@@ -18,6 +18,7 @@ class Bucket(Tool):
         self.db_host = options.get('db_host', 'localhost')
         self.db_pass = options.get('db_pass', None)
         self.db_user = options.get('db_user', None)
+        self.db_login_path = options.get('db_login_path', None)
         self.dryrun = options.get('dryrun', False)
         self.encrypt_key = options.get('encrypt_key', None)
         self.file_group = options.get('file_group', None)
@@ -28,7 +29,14 @@ class Bucket(Tool):
             options.get('tables_include', None),
             options.get('tables_exclude', None)
         )
-
+        self.cmd_auth = []
+        if self.db_login_path is not None:
+            self.cmd_auth = ['--login-path=' + self.db_login_path]
+        else:
+            if self.db_user is not None:
+                self.cmd_auth = ['--user', self.db_user]
+            if self.db_pass is not None:
+                self.cmd_auth.append('--password=' + self.db_pass)
 
     def backup(self):
         """Backup the databse"""
@@ -233,11 +241,7 @@ class Bucket(Tool):
                                 (default: {False})
             data {bool} -- Dump the database table data (default: {False})
         """
-        cmd = ['mysqldump', '--skip-opt']
-        if self.db_user is not None:
-            cmd += ['--user', self.db_user]
-        if self.db_pass is not None:
-            cmd.append('--password=' + self.db_pass)
+        cmd = ['mysqldump', ] + self.cmd_auth + ['--skip-opt', ]
         if not structure:
             cmd.append('-t')
         if not data:
@@ -278,9 +282,10 @@ class Bucket(Tool):
                       within each database
         """
         results = {}
+        cmd = ['mysql', ] + self.cmd_auth
         try:
             databases_raw = check_output(
-                ['mysql', '-e', 'show databases'],
+                cmd + ['-e', 'show databases'],
                 stderr=STDOUT
             ).decode()
         except CalledProcessError:
@@ -290,7 +295,7 @@ class Bucket(Tool):
             results[database] = []
             try:
                 tables_raw = check_output(
-                    ['mysql', database, '-e', 'show tables'],
+                    cmd + [database, '-e', 'show tables'],
                     stderr=STDOUT
                 ).decode()
             except CalledProcessError:
@@ -403,6 +408,14 @@ class Command(BaseCommand):
             help='Database table to include in the backup in the format '
                  'database.table (database.* is valid) '
                  '(can be used multiple times)',
+        )
+        parser.add_argument(
+            '--login-path',
+            action='store',
+            default=None,
+            dest='db_login_path',
+            help='Login path from mysql_config_editor file to use '
+                 'for authentication',
         )
         parser.add_argument(
             '-o', '--owner',
