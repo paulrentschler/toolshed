@@ -18,17 +18,25 @@ class Bucket(Tool):
         self.db_host = options.get('db_host', 'localhost')
         self.db_pass = options.get('db_pass', None)
         self.db_user = options.get('db_user', None)
+        self.db_login_path = options.get('db_login_path', None)
         self.dryrun = options.get('dryrun', False)
         self.encrypt_key = options.get('encrypt_key', None)
         self.file_group = options.get('file_group', None)
         self.file_owner = options.get('file_owner', None)
         self.today = datetime.now()
         self.verbosity = options.get('verbosity', 1)
+        self.cmd_auth = []
+        if self.db_login_path is not None:
+            self.cmd_auth = ['--login-path=' + self.db_login_path]
+        else:
+            if self.db_user is not None:
+                self.cmd_auth = ['--user', self.db_user]
+            if self.db_pass is not None:
+                self.cmd_auth.append('--password=' + self.db_pass)
         self.set_tables(
             options.get('tables_include', None),
             options.get('tables_exclude', None)
         )
-
 
     def backup(self):
         """Backup the databse"""
@@ -38,7 +46,6 @@ class Bucket(Tool):
             self.db_host,
             self.today.strftime("%-m/%-d/%Y %H:%M"),
         ), verbosity=1)
-
         self.create_backup_folder()
         for database, tables in self.tables.items():
             if self._is_excluded(database):
@@ -47,7 +54,6 @@ class Bucket(Tool):
                     database,
                 ), verbosity=1)
                 continue
-
             self.write('{}Backing up database: {}'.format(
                 'DryRun: ' if self.dryrun else '',
                 database,
@@ -59,27 +65,21 @@ class Bucket(Tool):
                         table,
                     ), verbosity=1)
                     continue
-
                 self.write('{}   Backing up table: {}'.format(
                     'DryRun: ' if self.dryrun else '',
                     table,
                 ), verbosity=2)
-
                 # output the structure
                 self.dump(database, table, structure=True, data=False)
-
                 # output the data
                 self.dump(database, table, structure=False, data=True)
-
         # collapse the folder of backup files into a single file
         self.collapse()
-
         # output the completion stats
         self.write('\n{}Backup finished on {}\n'.format(
             'DryRun: ' if self.dryrun else '',
             datetime.now().strftime('%-m/%-d/%Y %H:%M')
         ), verbosity=1)
-
 
     def collapse(self):
         """Collapse the folder of backup files into a single file
@@ -122,11 +122,9 @@ class Bucket(Tool):
                         call(cmd, shell=True, stdout=out_file, cwd=self.backup_path)  # NOQA
                 except CalledProcessError:
                     success = False
-
         if success:
             # set the permissions and ownerships for files
             self.file_ownership_permissions([filename, ])
-
             # delete the original backup directory
             self.write('{}Delete the backup folder: {}'.format(
                 'DryRun: ' if self.dryrun else '',
@@ -134,7 +132,6 @@ class Bucket(Tool):
             ), verbosity=2)
             if not self.dryrun:
                 shutil.rmtree(self.backup_path)
-
 
     def create_backup_folder(self):
         """Create the backup folder to store the backup
@@ -160,7 +157,6 @@ class Bucket(Tool):
         if not self.dryrun:
             os.makedirs(backup_path)
         self.backup_path = backup_path
-
 
     def dump(self, database, table, structure=False, data=False):
         """Database agnostic dump command for table structure and/or data
@@ -190,7 +186,6 @@ class Bucket(Tool):
             ), verbosity=3)
             if not self.dryrun:
                 os.makedirs(path)
-
         # determine the filename to use
         backup_content = ''
         if structure and not data:
@@ -203,7 +198,6 @@ class Bucket(Tool):
             backup_content
         )
         filename = os.path.join(path, filename)
-
         cmd = '_dump_{}'.format(self.database_type)
         try:
             self.write('{}       Writing {}'.format(
@@ -217,7 +211,6 @@ class Bucket(Tool):
                 'Dump method ({}) for {} database is not '
                 'implemented'.format(cmd, self.database_type)
             )
-
 
     def _dump_mysql(self, filename, database, table,
                     structure=False, data=False):
@@ -233,19 +226,17 @@ class Bucket(Tool):
                                 (default: {False})
             data {bool} -- Dump the database table data (default: {False})
         """
-        cmd = ['mysqldump', '--skip-opt']
-        if self.db_user is not None:
-            cmd += ['--user', self.db_user]
-        if self.db_pass is not None:
-            cmd.append('--password=' + self.db_pass)
+        err_filename = os.path.join(self.backup_path, 'errors.log')
+        cmd = ['mysqldump', ] + self.cmd_auth + ['--skip-opt', ]
         if not structure:
             cmd.append('-t')
         if not data:
             cmd.append('-d')
         cmd += [database, table]
-        with open(filename, 'wb') as dump_file:
-            call(cmd, stdout=dump_file)
-
+        with open(filename, 'wb') as dump_file, open(err_filename, 'wb') as err_file:  # NOQA
+            call(cmd, stdout=dump_file, stderr=err_file)
+        if os.path.exists(err_filename):
+            os.remove(err_filename)
 
     def get_tables(self):
         """Database agnostic method to get all the databases/tables
@@ -268,7 +259,6 @@ class Bucket(Tool):
                 'implemented'.format(cmd, self.database_type)
             )
 
-
     def _get_tables_mysql(self):
         """MySQL-specific method to get all the databases/tables
 
@@ -278,19 +268,28 @@ class Bucket(Tool):
                       within each database
         """
         results = {}
+        exclude_tables = (
+            'global_status',
+            'global_variables',
+            'session_status',
+            'session_variables',
+        )
+        cmd = ['mysql', ] + self.cmd_auth
         try:
             databases_raw = check_output(
-                ['mysql', '-e', 'show databases'],
+                cmd + ['-e', 'show databases'],
                 stderr=STDOUT
             ).decode()
         except CalledProcessError:
             return results
         databases = databases_raw.split('\n')
         for database in databases[1:-1]:
+            if database == 'sys':
+                continue
             results[database] = []
             try:
                 tables_raw = check_output(
-                    ['mysql', database, '-e', 'show tables'],
+                    cmd + [database, '-e', 'show tables'],
                     stderr=STDOUT
                 ).decode()
             except CalledProcessError:
@@ -298,9 +297,12 @@ class Bucket(Tool):
             else:
                 tables = tables_raw.split('\n')
                 for table in tables[1:-1]:
+                    if table[:10] == 'Tables_in_':
+                        continue
+                    if table.lower() in exclude_tables:
+                        continue
                     results[database].append(table)
         return results
-
 
     def _is_excluded(self, database, table=None):
         """Indicates if the database/table is excluded from the backup
@@ -318,7 +320,6 @@ class Bucket(Tool):
                 return not self.tables_exclude[database]
             else:
                 return table in self.tables_exclude[database]
-
 
     def set_tables(self, tables_include, tables_exclude):
         """Set the databases/tables to backup
@@ -339,7 +340,6 @@ class Bucket(Tool):
                 self.tables[database].append(table)
         else:
             self.tables = self.get_tables()
-
         self.tables_exclude = {}
         if tables_exclude:
             for entry in tables_exclude:
@@ -350,11 +350,8 @@ class Bucket(Tool):
                     self.tables_exclude[database].append(table)
 
 
-
-
 class Command(BaseCommand):
     help = 'Database backup tool'
-
 
     def add_arguments(self, parser):
         """Define command arguments"""
@@ -364,7 +361,6 @@ class Command(BaseCommand):
             action='store',
             help='Path to store backup files',
         )
-
         # Optional arguments
         parser.add_argument(
             '-e', '--encryptkey',
@@ -405,6 +401,14 @@ class Command(BaseCommand):
                  '(can be used multiple times)',
         )
         parser.add_argument(
+            '--login-path',
+            action='store',
+            default=None,
+            dest='db_login_path',
+            help='Login path from mysql_config_editor file to use '
+                 'for authentication',
+        )
+        parser.add_argument(
             '-o', '--owner',
             action='store',
             default=None,
@@ -434,16 +438,13 @@ class Command(BaseCommand):
             help='Database user to connect as',
         )
 
-
     def handle(self, *args, **options):
         backup_path = options.pop('backup_path')
         bucket = Bucket(backup_path, **options)
         try:
             bucket.backup()
         except (FileExistsError, ValueError) as e:
-            raise CommandError(e.msg)
-
-
+            raise CommandError(str(e) + '\n\n')
 
 
 if __name__ == '__main__':
