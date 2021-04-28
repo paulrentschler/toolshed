@@ -282,6 +282,12 @@ class Bucket(Tool):
                       within each database
         """
         results = {}
+        exclude_tables = (
+            'global_status',
+            'global_variables',
+            'session_status',
+            'session_variables',
+        )
         cmd = ['mysql', ] + self.cmd_auth
         try:
             databases_raw = check_output(
@@ -292,6 +298,8 @@ class Bucket(Tool):
             return results
         databases = databases_raw.split('\n')
         for database in databases[1:-1]:
+            if database == 'sys':
+                continue
             results[database] = []
             try:
                 tables_raw = check_output(
@@ -303,6 +311,8 @@ class Bucket(Tool):
             else:
                 tables = tables_raw.split('\n')
                 for table in tables[1:-1]:
+                    if table.lower() in exclude_tables:
+                        continue
                     results[database].append(table)
         return results
 
