@@ -119,7 +119,10 @@ class Bucket(Tool):
             if not self.dryrun:
                 try:
                     with open(filename, 'wb') as out_file:
-                        call(cmd, shell=True, stdout=out_file, cwd=self.backup_path)  # NOQA
+                        call(cmd,
+                             shell=True,
+                             stdout=out_file,
+                             cwd=self.backup_path)
                 except CalledProcessError:
                     success = False
         if success:
@@ -355,13 +358,11 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         """Define command arguments"""
-        # Positional arguments
         parser.add_argument(
             'backup_path',
             action='store',
             help='Path to store backup files',
         )
-        # Optional arguments
         parser.add_argument(
             '-e', '--encryptkey',
             action='store',

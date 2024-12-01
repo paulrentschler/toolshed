@@ -34,7 +34,6 @@ class TestBucket(unittest.TestCase):
             os.makedirs(tmp_path)
             return tmp_path
 
-
     def remove_dir(self, path):
         """Remove the directory and all of it's contents
 
@@ -42,7 +41,6 @@ class TestBucket(unittest.TestCase):
             path {string} -- complete path to the directory to remove
         """
         shutil.rmtree(path, ignore_errors=True)
-
 
     def test_backup_all(self):
         """Test backing up the entire database"""
@@ -69,7 +67,7 @@ class TestBucket(unittest.TestCase):
             'mysql' in database_dirs,
             msg='"mysql" database not backed up'
         )
-        table_dirs = os.listdir(os.path.join(backup_dir, 'information_schema'))  # NOQA
+        table_dirs = os.listdir(os.path.join(backup_dir, 'information_schema'))
         self.assertListEqual(
             sorted(table_dirs),
             [
@@ -213,7 +211,6 @@ class TestBucket(unittest.TestCase):
         )
         self.remove_dir(tmp_path)
 
-
     def test_backup_exclude(self):
         """Test backing up the entire database with some exclusions"""
         tmp_path = self.create_dir('exclude')
@@ -284,7 +281,6 @@ class TestBucket(unittest.TestCase):
         )
         self.remove_dir(tmp_path)
 
-
     def test_backup_include(self):
         """Test backing up only selected tables"""
         tmp_path = self.create_dir('include')
@@ -333,25 +329,24 @@ class TestBucket(unittest.TestCase):
         )
         self.remove_dir(tmp_path)
 
-
     def test_settables_all(self):
         """Ensure Bucket.set_tables() finds all the tables by default"""
         bucket = Bucket('./')
         bucket.set_tables(None, None)
         self.assertTrue(
-            len(bucket.tables_exclude.keys()) == 0,
+            len(list(bucket.tables_exclude.keys())) == 0,
             msg='Excluded tables list is not empty'
         )
         self.assertTrue(
-            len(bucket.tables.keys()) >= 2,
+            len(list(bucket.tables.keys())) >= 2,
             msg='Tables list does not include at least two databases'
         )
         self.assertTrue(
-            'information_schema' in bucket.tables.keys(),
+            'information_schema' in list(bucket.tables.keys()),
             msg='"information_schema" database not included'
         )
         self.assertTrue(
-            'mysql' in bucket.tables.keys(),
+            'mysql' in list(bucket.tables.keys()),
             msg='"mysql" database not included'
         )
         self.assertListEqual(
@@ -431,17 +426,16 @@ class TestBucket(unittest.TestCase):
             msg='"mysql" tables do not match expected'
         )
 
-
     def test_settables_exclude(self):
         """Ensure Bucket.set_tables() excludes specified tables"""
         bucket = Bucket('./')
         bucket.set_tables(None, ['information_schema.*', 'mysql.slow_log'])
         self.assertTrue(
-            len(bucket.tables_exclude.keys()) == 2,
+            len(list(bucket.tables_exclude.keys())) == 2,
             msg='Excluded tables list does not include two databases'
         )
         self.assertTrue(
-            'information_schema' in bucket.tables_exclude.keys(),
+            'information_schema' in list(bucket.tables_exclude.keys()),
             msg='"information_schema" database is not in excluded list'
         )
         self.assertListEqual(
@@ -450,7 +444,7 @@ class TestBucket(unittest.TestCase):
             msg='"information_schema" database is not completely excluded'
         )
         self.assertTrue(
-            'mysql' in bucket.tables_exclude.keys(),
+            'mysql' in list(bucket.tables_exclude.keys()),
             msg='"mysql" database is not in excluded list'
         )
         self.assertListEqual(
@@ -459,15 +453,15 @@ class TestBucket(unittest.TestCase):
             msg='"slow_log" table is not the only table excluded'
         )
         self.assertTrue(
-            len(bucket.tables.keys()) >= 2,
+            len(list(bucket.tables.keys())) >= 2,
             msg='Tables list does not include at least two databasees'
         )
         self.assertTrue(
-            'information_schema' in bucket.tables.keys(),
+            'information_schema' in list(bucket.tables.keys()),
             msg='"information_schema" database is not included'
         )
         self.assertTrue(
-            'mysql' in bucket.tables.keys(),
+            'mysql' in list(bucket.tables.keys()),
             msg='"mysql" database is not included'
         )
         self.assertListEqual(
@@ -501,25 +495,24 @@ class TestBucket(unittest.TestCase):
             msg='"mysql" tables do not match expected'
         )
 
-
     def test_settables_include(self):
         """Ensure Bucket.set_tables() only includes specified tables"""
         bucket = Bucket('./')
         bucket.set_tables(['mysql.db', 'mysql.host', 'mysql.user'], None)
         self.assertTrue(
-            len(bucket.tables_exclude.keys()) == 0,
+            len(list(bucket.tables_exclude.keys())) == 0,
             msg='Excluded tables list is not'
         )
         self.assertTrue(
-            len(bucket.tables.keys()) == 1,
+            len(list(bucket.tables.keys())) == 1,
             msg='Tables list does not include exactly one database'
         )
         self.assertFalse(
-            'information_schema' in bucket.tables.keys(),
+            'information_schema' in list(bucket.tables.keys()),
             msg='"information_schema" database is not excluded'
         )
         self.assertTrue(
-            'mysql' in bucket.tables.keys(),
+            'mysql' in list(bucket.tables.keys()),
             msg='"mysql" database not included'
         )
         self.assertListEqual(
@@ -531,8 +524,6 @@ class TestBucket(unittest.TestCase):
             ],
             msg='"mysql" tables do not match expected'
         )
-
-
 
 
 if __name__ == '__main__':
