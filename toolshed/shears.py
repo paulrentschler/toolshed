@@ -22,9 +22,12 @@ class Shears(Tool):
         self.backup_levels = OrderedDict()
         self.backup_path = backup_path
         self.dryrun = options.get('dryrun', False)
-        self.file_extensions = [
-            ext.strip().replace('.', '') for ext in file_extensions
-        ]
+        self.file_extensions = []
+        for ext in file_extensions:
+            ext = ext.strip()
+            if ext[0] == '.':
+                ext = ext[1:]
+            self.file_extensions.append(ext)
         self.limit = options.get('limit', None)
         self.today = datetime.now()
         self.verbosity = options.get('verbosity', 1)
@@ -118,7 +121,7 @@ class Shears(Tool):
                     os.path.join(path, item),
                 ), verbosity=3)
                 continue
-            filename, extension = item.rsplit('.', 1)
+            filename, extension = item.split('.', 1)
             if extension != file_extension:
                 self.write('{}        Skipping {}: not *.{} file'.format(
                     'DryRun: ' if self.dryrun else '',

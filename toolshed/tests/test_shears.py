@@ -134,7 +134,7 @@ class TestShears(unittest.TestCase):
         yearly directories.
         """
         self.create_files(date(2017, 11, 15), 275, '.bak', '')
-        shears = Shears(self.tmp_path, ['.bak', ], verbosity=0)
+        shears = Shears(self.tmp_path, ['.bak ', ], verbosity=0)
         shears.prune()
         self.assertListEqual(
             sorted(os.listdir(os.path.join(self.tmp_path, 'daily'))),
@@ -183,6 +183,66 @@ class TestShears(unittest.TestCase):
         self.assertListEqual(
             sorted(os.listdir(os.path.join(self.tmp_path, 'yearly'))),
             ['2017-12-31.bak', ],
+            msg='Yearly files do not match the expected files'
+        )
+
+    def test_just_dates__multipart_extension(self):
+        """Prune nine months of files with YYYY-MM-DD.tar.gz filenames
+
+        Takes nine months worth of files, spanning from 15 Nov 2017 till
+        16 Aug 2018, and prunes them into daily, weekly, monthly, and
+        yearly directories.
+        """
+        self.create_files(date(2017, 11, 15), 275, '.tar.gz', '')
+        shears = Shears(self.tmp_path, ['tar.gz', ], verbosity=0)
+        shears.prune()
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'daily'))),
+            [
+                '2018-08-03.tar.gz',
+                '2018-08-04.tar.gz',
+                '2018-08-05.tar.gz',
+                '2018-08-06.tar.gz',
+                '2018-08-07.tar.gz',
+                '2018-08-08.tar.gz',
+                '2018-08-09.tar.gz',
+                '2018-08-10.tar.gz',
+                '2018-08-11.tar.gz',
+                '2018-08-12.tar.gz',
+                '2018-08-13.tar.gz',
+                '2018-08-14.tar.gz',
+                '2018-08-15.tar.gz',
+                '2018-08-16.tar.gz',
+            ],
+            msg='Daily files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'weekly'))),
+            [
+                '2018-06-23.tar.gz',
+                '2018-06-30.tar.gz',
+                '2018-07-07.tar.gz',
+                '2018-07-14.tar.gz',
+                '2018-07-21.tar.gz',
+                '2018-07-28.tar.gz',
+            ],
+            msg='Weekly files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'monthly'))),
+            [
+                '2018-01-31.tar.gz',
+                '2018-02-28.tar.gz',
+                '2018-03-31.tar.gz',
+                '2018-04-30.tar.gz',
+                '2018-05-31.tar.gz',
+                '2018-07-31.tar.gz',
+            ],
+            msg='Monthly files do not match the expected files'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'yearly'))),
+            ['2017-12-31.tar.gz', ],
             msg='Yearly files do not match the expected files'
         )
 
@@ -330,7 +390,7 @@ class TestShears(unittest.TestCase):
         self.create_files(date(2017, 11, 15), 275, '.tmp', 'test_backup')
         shears = Shears(
             self.tmp_path,
-            ['up', '.bak', 'tmp'],
+            ['back.up', '.tmp.bak', 'tmp'],
             verbosity=0,
             daily=7,
             weekly=2,
@@ -517,7 +577,7 @@ class TestShears(unittest.TestCase):
                 ignore_errors=True
             )
 
-        shears = Shears(self.tmp_path, ['.bak', ], verbosity=0, limit=6)
+        shears = Shears(self.tmp_path, [' tmp.bak ', ], verbosity=0, limit=6)
         shears.prune()
         self.assertListEqual(
             sorted(os.listdir(self.tmp_path)),
