@@ -22,7 +22,8 @@ class TestShears(unittest.TestCase):
             name_suffix {string} -- Optional suffix to add to the filename
                                     (Default: '')
         """
-        extension = extension.replace('.', '')
+        if extension[0] == '.':
+            extension = extension[1:]
         while num_files > 0:
             filename = '{:04d}-{:02d}-{:02d}'.format(
                 start_date.year,
@@ -269,7 +270,7 @@ class TestShears(unittest.TestCase):
         self.create_files(date(2017, 11, 15), 275, '.tmp', 'test_backup')
         shears = Shears(
             self.tmp_path,
-            ['.up', '.bak', 'tmp'],
+            ['up', '.bak', 'tmp'],
             verbosity=0,
             daily=7,
             weekly=2,
@@ -441,6 +442,34 @@ class TestShears(unittest.TestCase):
             sorted(os.listdir(os.path.join(self.tmp_path, 'yearly'))),
             [],
             msg='Yearly files do not match the expected files'
+        )
+
+    def test_limit_multipart_extension(self):
+        """Prune 10 files with multipart extensions down to 6"""
+        self.create_files(date(2017, 11, 15), 10, '.tmp.bak', 'test_backup')
+        for item in os.listdir(os.path.join(self.tmp_path, 'daily')):
+            src = os.path.join(self.tmp_path, 'daily', item)
+            dest = os.path.join(self.tmp_path, item)
+            os.rename(src, dest)
+        for folder in ['daily', 'weekly', 'monthly', 'yearly']:
+            shutil.rmtree(
+                os.path.join(self.tmp_path, folder),
+                ignore_errors=True
+            )
+
+        shears = Shears(self.tmp_path, ['.bak', ], verbosity=0, limit=6)
+        shears.prune()
+        self.assertListEqual(
+            sorted(os.listdir(self.tmp_path)),
+            [
+                '2017-11-19_test_backup.tmp.bak',
+                '2017-11-20_test_backup.tmp.bak',
+                '2017-11-21_test_backup.tmp.bak',
+                '2017-11-22_test_backup.tmp.bak',
+                '2017-11-23_test_backup.tmp.bak',
+                '2017-11-24_test_backup.tmp.bak',
+            ],
+            msg='Remaining files do not match the expected files'
         )
 
     def test_limit_only(self):
