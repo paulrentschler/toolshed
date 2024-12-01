@@ -37,6 +37,34 @@ class TestShears(unittest.TestCase):
             start_date = start_date + timedelta(days=1)
             num_files -= 1
 
+    def create_folders(self, start_date, num_folders, name_suffix=''):
+        """Create sequential backup folders
+
+        Arguments:
+            start_date {date} -- Starting date for the first backup file
+            num_folders {integer} -- Total number of backup files to create
+
+        Keyword Arguments:
+            name_suffix {string} -- Optional suffix to add to the folder name
+                                    (Default: '')
+        """
+        while num_folders > 0:
+            folder_name = '{:04d}-{:02d}-{:02d}'.format(
+                start_date.year,
+                start_date.month,
+                start_date.day
+            )
+            if name_suffix:
+                folder_name = '{}_{}'.format(folder_name, name_suffix)
+            path = os.path.join(self.tmp_path, 'daily', folder_name)
+            os.mkdir(path)
+            open(os.path.join(path, 'test.bak'), 'a').close()
+            open(os.path.join(path, 'test.log'), 'a').close()
+            open(os.path.join(path, 'test.tar.gz'), 'a').close()
+            open(os.path.join(path, 'test.zip'), 'a').close()
+            start_date = start_date + timedelta(days=1)
+            num_folders -= 1
+
     def setUp(self):
         """Create a temporary directory structure to use for the pruning tests
 
@@ -124,6 +152,105 @@ class TestShears(unittest.TestCase):
             sorted(os.listdir(os.path.join(self.tmp_path, 'yearly'))),
             ['2017-12-31_test_backup.bak', ],
             msg='Yearly files do not match the expected files'
+        )
+
+    def test_directory__levels(self):
+        """Prune nine months of folders that span the end of the year
+
+        Takes nine months worth of folders, spanning from 15 Nov 2017 till
+        16 Aug 2018, and prunes them into daily, weekly, monthly, and
+        yearly directories.
+        """
+        self.create_folders(date(2017, 11, 15), 275, 'backup')
+        shears = Shears(
+            self.tmp_path,
+            ['', ],
+            folders=True,
+            verbosity=0,
+        )
+        shears.prune()
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'daily'))),
+            [
+                '2018-08-03_backup',
+                '2018-08-04_backup',
+                '2018-08-05_backup',
+                '2018-08-06_backup',
+                '2018-08-07_backup',
+                '2018-08-08_backup',
+                '2018-08-09_backup',
+                '2018-08-10_backup',
+                '2018-08-11_backup',
+                '2018-08-12_backup',
+                '2018-08-13_backup',
+                '2018-08-14_backup',
+                '2018-08-15_backup',
+                '2018-08-16_backup',
+            ],
+            msg='Daily folders do not match the expected folders'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'weekly'))),
+            [
+                '2018-06-23_backup',
+                '2018-06-30_backup',
+                '2018-07-07_backup',
+                '2018-07-14_backup',
+                '2018-07-21_backup',
+                '2018-07-28_backup',
+            ],
+            msg='Weekly folders do not match the expected folders'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'monthly'))),
+            [
+                '2018-01-31_backup',
+                '2018-02-28_backup',
+                '2018-03-31_backup',
+                '2018-04-30_backup',
+                '2018-05-31_backup',
+                '2018-07-31_backup',
+            ],
+            msg='Monthly folders do not match the expected folders'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'yearly'))),
+            ['2017-12-31_backup', ],
+            msg='Yearly folders do not match the expected folders'
+        )
+
+    def test_directory__limit(self):
+        """Prune 10 directories down to 6"""
+        self.create_folders(date(2017, 11, 15), 10)
+        for item in os.listdir(os.path.join(self.tmp_path, 'daily')):
+            src = os.path.join(self.tmp_path, 'daily', item)
+            dest = os.path.join(self.tmp_path, item)
+            os.rename(src, dest)
+        for folder in ['daily', 'weekly', 'monthly', 'yearly']:
+            shutil.rmtree(
+                os.path.join(self.tmp_path, folder),
+                ignore_errors=True
+            )
+
+        shears = Shears(
+            self.tmp_path,
+            ['', ],
+            folders=True,
+            limit=6,
+            verbosity=0,
+        )
+        shears.prune()
+        self.assertListEqual(
+            sorted(os.listdir(self.tmp_path)),
+            [
+                '2017-11-19',
+                '2017-11-20',
+                '2017-11-21',
+                '2017-11-22',
+                '2017-11-23',
+                '2017-11-24',
+            ],
+            msg='Remaining folders do not match the expected folders'
         )
 
     def test_just_dates(self):

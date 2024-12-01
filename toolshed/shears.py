@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from tool import BaseCommand, CommandError, Tool
 
 import os
+import shutil
 import sys
 
 
@@ -25,9 +26,16 @@ class Shears(Tool):
         self.file_extensions = []
         for ext in file_extensions:
             ext = ext.strip()
-            if ext[0] == '.':
-                ext = ext[1:]
-            self.file_extensions.append(ext)
+            try:
+                if ext[0] == '.':
+                    ext = ext[1:]
+            except IndexError:
+                pass
+            else:
+                self.file_extensions.append(ext)
+        self.folders = options.get('folders', False)
+        if self.folders and not self.file_extensions:
+            self.file_extensions = ['']
         self.limit = options.get('limit', None)
         self.today = datetime.now()
         self.verbosity = options.get('verbosity', 1)
@@ -63,14 +71,18 @@ class Shears(Tool):
             extension {string} -- Extension for the backup file
             path {string} -- Path to the backup file
         """
-        filename = "{}.{}".format(filename, extension)
+        if not self.folders:
+            filename = '{}.{}'.format(filename, extension)
         filename = os.path.join(path, filename)
         self.write('{}        Deleting {}'.format(
             'DryRun: ' if self.dryrun else '',
             filename,
         ), verbosity=3)
         if not self.dryrun:
-            os.remove(filename)
+            if self.folders:
+                shutil.rmtree(filename)
+            else:
+                os.remove(filename)
 
     def get_backup_date(self, filename):
         """Returns datetime object based on the date in the filename
@@ -116,10 +128,27 @@ class Shears(Tool):
         files = []
         for item in os.listdir(path):
             if not os.path.isfile(os.path.join(path, item)):
-                self.write('{}        Skipping {}: not a file'.format(
-                    'DryRun: ' if self.dryrun else '',
-                    os.path.join(path, item),
-                ), verbosity=3)
+                if not self.folders:
+                    self.write('{}        Skipping {}: not a file'.format(
+                        'DryRun: ' if self.dryrun else '',
+                        os.path.join(path, item),
+                    ), verbosity=3)
+                    continue
+
+                if self.get_backup_date(item) is None:
+                    self.write(
+                        '{}        Skipping {}: no date in filename'.format(
+                            'DryRun: ' if self.dryrun else '',
+                            os.path.join(path, item),
+                        ),
+                        verbosity=3
+                    )
+                else:
+                    self.write('{}        Keeping {}'.format(
+                        'DryRun: ' if self.dryrun else '',
+                        os.path.join(path, item),
+                    ), verbosity=3)
+                    files.append(item)
                 continue
             filename, extension = item.split('.', 1)
             if extension != file_extension:
@@ -157,12 +186,12 @@ class Shears(Tool):
                          timeframe
         """
         file_date = self.get_backup_date(filename)
-        year = int(file_date.strftime("%Y"))
+        year = int(file_date.strftime('%Y'))
         if timeframe == 'weekly':
             # Saturday (6) is considered the end of the week
-            return file_date.strftime("%w") == '6'
+            return file_date.strftime('%w') == '6'
         elif timeframe == 'monthly':
-            month = int(file_date.strftime("%-m")) + 1
+            month = int(file_date.strftime('%-m')) + 1
             if month == 13:
                 year += 1
                 month = 1
@@ -183,7 +212,8 @@ class Shears(Tool):
             path {string} -- Path to the backup file
             new_path {string} -- Path where the backup file is going
         """
-        filename = "{}.{}".format(filename, extension)
+        if not self.folders:
+            filename = '{}.{}'.format(filename, extension)
         src = os.path.join(path, filename)
         dest = os.path.join(new_path, filename)
         self.write('{}        Renaming {} to {}'.format(
@@ -199,7 +229,7 @@ class Shears(Tool):
         self.write('{}Pruning backups in ({}) started on: {}\n'.format(
             'DryRun: ' if self.dryrun else '',
             self.backup_path,
-            self.today.strftime("%-m/%-d/%Y %H:%M"),
+            self.today.strftime('%-m/%-d/%Y %H:%M'),
         ), verbosity=1)
 
         if self.limit is not None:
@@ -231,12 +261,14 @@ class Shears(Tool):
             limit {integer} -- Number of days worth of backups to keep
                                for this backup level
         """
-        self.write('{}Prune {} *.{} files ({} max)'.format(
-            'DryRun: ' if self.dryrun else '',
-            level,
-            file_extension,
-            limit,
-        ), verbosity=1)
+        dryrun = 'DryRun: ' if self.dryrun else ''
+        msg = f'{dryrun}Prune {level} '
+        if self.folders:
+            msg += f'folders '
+        else:
+            msg += f'*.{file_extension} files '
+        msg += f'({limit} max)'
+        self.write(msg, verbosity=1)
 
         # read the valid backup files from `path`
         backup_files = self.get_directory_files(path, file_extension)
@@ -279,11 +311,14 @@ class Shears(Tool):
             path {object} -- Path to the files to prune
             limit {integer} -- Number of files to keep
         """
-        self.write('{}Prune *.{} files ({} max)'.format(
-            'DryRun: ' if self.dryrun else '',
-            file_extension,
-            limit,
-        ), verbosity=1)
+        dryrun = 'DryRun: ' if self.dryrun else ''
+        msg = f'{dryrun}Prune '
+        if self.folders:
+            msg += f'folders '
+        else:
+            msg += f'*.{file_extension} files '
+        msg += f'({limit} max)'
+        self.write(msg, verbosity=1)
 
         # read the valid backup files from `path`
         backup_files = self.get_directory_files(path, file_extension)
