@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from argparse import ArgumentParser
 from subprocess import call
 
@@ -18,8 +16,6 @@ class CommandError(Exception):
     wrong in the execution of a command.
     """
     pass
-
-
 
 
 class BaseCommand(object):
@@ -56,16 +52,13 @@ class BaseCommand(object):
     # Metadata about this command.
     help = ''
 
-
     def __init__(self, stdout=None, stderr=None):
         self.stdout = stdout or sys.stdout
         self.stderr = stderr or sys.stderr
 
-
     def add_arguments(self, parser):
         """Entry point for subclassed commands to add custom arguments"""
         pass
-
 
     def create_parser(self, prog_name):
         """Create and return the `ArgumentParser` to parse arguments"""
@@ -103,7 +96,6 @@ class BaseCommand(object):
         self.add_arguments(parser)
         return parser
 
-
     def error(self, msg, end=None, verbosity=1):
         """Output a message to the standard error stream
 
@@ -128,7 +120,6 @@ class BaseCommand(object):
             self.stderr.write(msg, ending=end)
             self.stderr.flush()
 
-
     def execute(self, *args, **options):
         """Try to execute this command"""
         if sys.version_info < (3, 3):
@@ -147,7 +138,6 @@ class BaseCommand(object):
             self.stdout.write(output)
         return output
 
-
     def handle(self, *args, **options):
         """
         The actual logic of the command. Subclasses must implement
@@ -157,12 +147,10 @@ class BaseCommand(object):
             'Subclasses of Command must provide a handle() method'
         )
 
-
     def print_help(self, prog_name, subcommand):
         """Print the help message for this command"""
         parser = self.create_parser(prog_name, subcommand)
         parser.print_help()
-
 
     def run_from_argv(self, argv):
         """Set up any environment changes, then run the command
@@ -188,7 +176,6 @@ class BaseCommand(object):
             self.stderr.write('%s: %s' % (e.__class__.__name__, e))
             sys.exit(1)
 
-
     def write(self, msg, end=None, verbosity=1):
         """Output a message to the standard output stream
 
@@ -213,11 +200,8 @@ class BaseCommand(object):
             self.stdout.flush()
 
 
-
-
 class Tool(object):
     verbosity = 1
-
 
     def file_ownership_permissions(self, files, indent=4, permissions='440'):
         """Set the ownership and permissions of the files
@@ -267,7 +251,6 @@ class Tool(object):
             if not self.dryrun:
                 for file in files:
                     call(['chown', self.file_owner, file])
-
 
     def write(self, msg, end='\n', verbosity=1):
         """Output text to standard output

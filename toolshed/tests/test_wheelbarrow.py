@@ -34,7 +34,6 @@ class TestBucket(unittest.TestCase):
             os.makedirs(tmp_path)
             return tmp_path
 
-
     def remove_dir(self, path):
         """Remove the directory and all of it's contents
 
@@ -42,7 +41,6 @@ class TestBucket(unittest.TestCase):
             path {string} -- complete path to the directory to remove
         """
         shutil.rmtree(path, ignore_errors=True)
-
 
     def test_backup_combined(self):
         """Test backing up the Plone data into a single file"""
@@ -79,7 +77,6 @@ class TestBucket(unittest.TestCase):
             msg='Backup of blob storage incomplete'
         )
         self.remove_dir(tmp_path)
-
 
     def test_backup_separate(self):
         """Test backing up the Plone data into multiple files"""
@@ -120,8 +117,6 @@ class TestBucket(unittest.TestCase):
             msg='Backup Data.fs file was in blob storage backup'
         )
         self.remove_dir(tmp_path)
-
-
 
 
 if __name__ == '__main__':

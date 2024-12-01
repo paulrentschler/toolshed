@@ -28,7 +28,6 @@ class Wheelbarrow(Tool):
         self.today = datetime.now()
         self.verbosity = options.get('verbosity', 1)
 
-
     def backup(self):
         """Backup the Plone data files"""
         self.write('{}Plone backup for ({}) started on: {}\n'.format(
@@ -56,8 +55,14 @@ class Wheelbarrow(Tool):
             ]
         else:
             files = [
-                os.path.join(self.backup_path, '{}_data.fs'.format(date_str)),
-                os.path.join(self.backup_path, '{}_blobstorage.tar.gz'.format(date_str)),  # NOQA
+                os.path.join(
+                    self.backup_path,
+                    '{}_data.fs'.format(date_str)
+                ),
+                os.path.join(
+                    self.backup_path,
+                    '{}_blobstorage.tar.gz'.format(date_str)
+                ),
             ]
 
         # set the permissions and ownerships for files
@@ -68,7 +73,6 @@ class Wheelbarrow(Tool):
             'DryRun: ' if self.dryrun else '',
             datetime.now().strftime('%-m/%-d/%Y %H:%M'),
         ), verbosity=1)
-
 
     def backup_blob_storage(self):
         """Backup the Plone blob storage by tarring the files"""
@@ -97,13 +101,17 @@ class Wheelbarrow(Tool):
                 if not self.dryrun:
                     os.remove(os.path.join(blob_path, 'Data.fs'))
 
-
     def copy_datafs(self):
         """Copy the Plone data.fs file and prefix with the current date"""
         datafs_path = os.path.join(self.plone_path, 'var', 'filestorage')
         src_file = os.path.join(datafs_path, 'Data.fs')
         if self.combined:
-            dest_file = os.path.join(self.plone_path, 'var', 'blobstorage', 'Data.fs')  # NOQA
+            dest_file = os.path.join(
+                self.plone_path,
+                'var',
+                'blobstorage',
+                'Data.fs'
+            )
             self.write('{}    Copying Data.fs to blob storage for combined backup'.format(  # NOQA
                 'DryRun: ' if self.dryrun else '',
             ), verbosity=3)
@@ -118,15 +126,11 @@ class Wheelbarrow(Tool):
             shutil.copyfile(src_file, dest_file)
 
 
-
-
 class Command(BaseCommand):
     help = 'Plone data backup tool'
 
-
     def add_arguments(self, parser):
         """Define command arguments"""
-        # Positional arguments
         parser.add_argument(
             'backup_path',
             action='store',
@@ -137,8 +141,6 @@ class Command(BaseCommand):
             action='store',
             help='Path to the Plone zeocluster directory',
         )
-
-        # Optional arguments
         parser.add_argument(
             '-c', '--combine',
             action='store_true',
@@ -162,7 +164,6 @@ class Command(BaseCommand):
             help='Unix user who should own the backup files',
         )
 
-
     def handle(self, *args, **options):
         backup_path = options.pop('backup_path')
         plone_path = options.pop('plone_path')
@@ -171,8 +172,6 @@ class Command(BaseCommand):
             wheelbarrow.backup()
         except (ValueError,) as e:
             raise CommandError(e.msg)
-
-
 
 
 if __name__ == '__main__':

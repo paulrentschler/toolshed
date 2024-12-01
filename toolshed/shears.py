@@ -30,13 +30,14 @@ class Shears(Tool):
         self.verbosity = options.get('verbosity', 1)
 
         # set default level options
-        if 'daily' not in options.keys():
+        options_keys = list(options.keys())
+        if 'daily' not in options_keys:
             options['daily'] = 14
-        if 'weekly' not in options.keys():
+        if 'weekly' not in options_keys:
             options['weekly'] = 6
-        if 'monthly' not in options.keys():
+        if 'monthly' not in options_keys:
             options['monthly'] = 6
-        if 'yearly' not in options.keys():
+        if 'yearly' not in options_keys:
             options['yearly'] = 6
 
         # set the backup levels, max files, and paths
@@ -49,7 +50,6 @@ class Shears(Tool):
                 'limit': days,
                 'path': os.path.join(self.backup_path, level),
             }
-
 
     def delete(self, filename, extension, path):
         """Delete existing backup file
@@ -68,7 +68,6 @@ class Shears(Tool):
         ), verbosity=3)
         if not self.dryrun:
             os.remove(filename)
-
 
     def get_backup_date(self, filename):
         """Returns datetime object based on the date in the filename
@@ -97,7 +96,6 @@ class Shears(Tool):
             return datetime.strptime(file_date, "%Y-%m-%d")
         except ValueError:
             return None
-
 
     def get_directory_files(self, path, file_extension):
         """Return sorted list of files in `path` with `file_extension`
@@ -129,7 +127,7 @@ class Shears(Tool):
                 ), verbosity=3)
                 continue
             if self.get_backup_date(filename) is None:
-                self.write('{}        Skipping {}: no date in filename'.format(  # NOQA
+                self.write('{}        Skipping {}: no date in filename'.format(
                     'DryRun: ' if self.dryrun else '',
                     os.path.join(path, item),
                 ), verbosity=3)
@@ -142,7 +140,6 @@ class Shears(Tool):
                 files.append(filename)
         files.sort()
         return files
-
 
     def is_end_of(self, timeframe, filename):
         """Is the `filename` at the end of the `timeframe`
@@ -173,7 +170,6 @@ class Shears(Tool):
             return file_date == test_date
         return False
 
-
     def move(self, filename, extension, path, new_path):
         """Move backup file to a new level
 
@@ -194,7 +190,6 @@ class Shears(Tool):
         ), verbosity=3)
         if not self.dryrun:
             os.rename(src, dest)
-
 
     def prune(self):
         """Starting point to prune backups at all levels"""
@@ -222,7 +217,6 @@ class Shears(Tool):
             'DryRun: ' if self.dryrun else '',
             datetime.now().strftime('%-m/%-d/%Y %H:%M'),
         ), verbosity=1)
-
 
     def prune_level(self, file_extension, level, path, limit):
         """Prune the files at one backup level
@@ -274,7 +268,6 @@ class Shears(Tool):
                 ), verbosity=1)
                 self.delete(backup_file, file_extension, path)
 
-
     def prune_limit(self, file_extension, path, limit):
         """Prune the `file_extension` files in `path` to `limit` files
 
@@ -306,15 +299,11 @@ class Shears(Tool):
             self.delete(backup_file, file_extension, path)
 
 
-
-
 class Command(BaseCommand):
     help = 'Backup file pruning tool'
 
-
     def add_arguments(self, parser):
         """Define command arguments"""
-        # Positional arguments
         parser.add_argument(
             'backup_path',
             action='store',
@@ -327,8 +316,6 @@ class Command(BaseCommand):
                  '(more than one can be specified)',
             nargs='+',
         )
-
-        # Optional arguments
         parser.add_argument(
             '--daily',
             action='store',
@@ -370,7 +357,6 @@ class Command(BaseCommand):
             type=int,
         )
 
-
     def handle(self, *args, **options):
         backup_path = options.pop('backup_path')
         extensions = options.pop('extension')
@@ -379,8 +365,6 @@ class Command(BaseCommand):
             shears.prune()
         except (ValueError,) as e:
             raise CommandError(e.msg)
-
-
 
 
 if __name__ == '__main__':

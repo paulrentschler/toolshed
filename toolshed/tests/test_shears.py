@@ -36,7 +36,6 @@ class TestShears(unittest.TestCase):
             start_date = start_date + timedelta(days=1)
             num_files -= 1
 
-
     def setUp(self):
         """Create a temporary directory structure to use for the pruning tests
 
@@ -57,7 +56,6 @@ class TestShears(unittest.TestCase):
             path = os.path.join(self.tmp_path, level)
             os.makedirs(path)
 
-
     def tearDown(self):
         """Delete the temporary directory and everything it contains"""
         error_free = True
@@ -66,7 +64,6 @@ class TestShears(unittest.TestCase):
                 error_free = False
         if error_free:
             shutil.rmtree(self.tmp_path, ignore_errors=True)
-
 
     def test_default(self):
         """Prune nine months of files that span the end of the year
@@ -127,7 +124,6 @@ class TestShears(unittest.TestCase):
             ['2017-12-31_test_backup.bak', ],
             msg='Yearly files do not match the expected files'
         )
-
 
     def test_shorter_limits(self):
         """Prune nine months of files that span the end of the year
@@ -202,7 +198,6 @@ class TestShears(unittest.TestCase):
             msg='Yearly files do not match the expected files'
         )
 
-
     def test_daily_weekly_only(self):
         """Prune nine months of files that span the end of the year
 
@@ -260,7 +255,6 @@ class TestShears(unittest.TestCase):
             [],
             msg='Yearly files do not match the expected files'
         )
-
 
     def test_multiple_extensions(self):
         """Prune nine months of files with three different extensions
@@ -344,7 +338,6 @@ class TestShears(unittest.TestCase):
             msg='Yearly files do not match the expected files'
         )
 
-
     def test_daily_monthly_only(self):
         """Prune nine months of files that span the end of the year
 
@@ -405,7 +398,6 @@ class TestShears(unittest.TestCase):
             msg='Yearly files do not match the expected files'
         )
 
-
     def test_monthly_only(self):
         """Prune nine months of files that span the end of the year
 
@@ -451,7 +443,6 @@ class TestShears(unittest.TestCase):
             msg='Yearly files do not match the expected files'
         )
 
-
     def test_limit_only(self):
         """Prune 10 files down to 6"""
         self.create_files(date(2017, 11, 15), 10, '.bak', 'test_backup')
@@ -460,7 +451,10 @@ class TestShears(unittest.TestCase):
             dest = os.path.join(self.tmp_path, item)
             os.rename(src, dest)
         for folder in ['daily', 'weekly', 'monthly', 'yearly']:
-            shutil.rmtree(os.path.join(self.tmp_path, folder), ignore_errors=True)  # NOQA
+            shutil.rmtree(
+                os.path.join(self.tmp_path, folder),
+                ignore_errors=True
+            )
 
         shears = Shears(self.tmp_path, ['.bak', ], verbosity=0, limit=6)
         shears.prune()
@@ -476,8 +470,6 @@ class TestShears(unittest.TestCase):
             ],
             msg='Remaining files do not match the expected files'
         )
-
-
 
 
 if __name__ == '__main__':
