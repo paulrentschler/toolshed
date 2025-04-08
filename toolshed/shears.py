@@ -144,7 +144,7 @@ class Shears(Tool):
                         verbosity=3
                     )
                 else:
-                    self.write('{}        Keeping {}'.format(
+                    self.write('{}        Considering {}'.format(
                         'DryRun: ' if self.dryrun else '',
                         os.path.join(path, item),
                     ), verbosity=3)
@@ -165,7 +165,7 @@ class Shears(Tool):
                 ), verbosity=3)
                 continue
             else:
-                self.write('{}        Keeping {}'.format(
+                self.write('{}        Considering {}'.format(
                     'DryRun: ' if self.dryrun else '',
                     os.path.join(path, item),
                 ), verbosity=3)
@@ -279,6 +279,9 @@ class Shears(Tool):
             remove_files.append(backup_files.pop(0))
 
         # remove the files for this level
+        self.write('\n{}    Prune the existing backup files'.format(
+            'DryRun: ' if self.dryrun else '',
+        ), verbosity=2)
         levels = list(self.backup_levels.keys())
         level_index = levels.index(level)
         for backup_file in remove_files:
@@ -329,6 +332,9 @@ class Shears(Tool):
             remove_files.append(backup_files.pop(0))
 
         # remove the files
+        self.write('\n{}    Prune the existing backup files'.format(
+            'DryRun: ' if self.dryrun else '',
+        ), verbosity=2)
         for backup_file in remove_files:
             self.write('{}    Removing {}'.format(
                 'DryRun: ' if self.dryrun else '',
