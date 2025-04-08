@@ -95,6 +95,13 @@ class Shears(Tool):
             YYYY-MM-DD_database
             YYYY-MM-DD_database_test
 
+        Alternate format examples:
+            YYYYMMDD
+            YYYYMMDD-HHMM
+            YYYYMMDD-database
+            YYYYMMDD-database-test
+            YYYYMMDD-database_test
+
         Arguments:
             filename {string} -- backup filename without the extension
                                  in the format YYYY-MM-DD_extra_text
@@ -108,9 +115,16 @@ class Shears(Tool):
         except ValueError:
             file_date = filename
         try:
-            return datetime.strptime(file_date, "%Y-%m-%d")
+            return datetime.strptime(file_date, '%Y-%m-%d')
         except ValueError:
-            return None
+            try:
+                file_date, file_description = filename.split('-', 1)
+            except ValueError:
+                file_date = filename
+            try:
+                return datetime.strptime(file_date, '%Y%m%d')
+            except ValueError:
+                return None
 
     def get_directory_files(self, path, file_extension):
         """Return sorted list of files in `path` with `file_extension`
