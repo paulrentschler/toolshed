@@ -355,6 +355,13 @@ class Command(BaseCommand):
             nargs='+',
         )
         parser.add_argument(
+            '--folders',
+            action='store_true',
+            default=False,
+            dest='folders',
+            help='Indicate that folders, not files, are being pruned',
+        )
+        parser.add_argument(
             '--daily',
             action='store',
             default=14,
