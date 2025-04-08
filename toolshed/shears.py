@@ -95,6 +95,13 @@ class Shears(Tool):
             YYYY-MM-DD_database
             YYYY-MM-DD_database_test
 
+        Alternate format examples:
+            YYYYMMDD
+            YYYYMMDD-HHMM
+            YYYYMMDD-database
+            YYYYMMDD-database-test
+            YYYYMMDD-database_test
+
         Arguments:
             filename {string} -- backup filename without the extension
                                  in the format YYYY-MM-DD_extra_text
@@ -108,9 +115,16 @@ class Shears(Tool):
         except ValueError:
             file_date = filename
         try:
-            return datetime.strptime(file_date, "%Y-%m-%d")
+            return datetime.strptime(file_date, '%Y-%m-%d')
         except ValueError:
-            return None
+            try:
+                file_date, file_description = filename.split('-', 1)
+            except ValueError:
+                file_date = filename
+            try:
+                return datetime.strptime(file_date, '%Y%m%d')
+            except ValueError:
+                return None
 
     def get_directory_files(self, path, file_extension):
         """Return sorted list of files in `path` with `file_extension`
@@ -144,7 +158,7 @@ class Shears(Tool):
                         verbosity=3
                     )
                 else:
-                    self.write('{}        Keeping {}'.format(
+                    self.write('{}        Considering {}'.format(
                         'DryRun: ' if self.dryrun else '',
                         os.path.join(path, item),
                     ), verbosity=3)
@@ -165,7 +179,7 @@ class Shears(Tool):
                 ), verbosity=3)
                 continue
             else:
-                self.write('{}        Keeping {}'.format(
+                self.write('{}        Considering {}'.format(
                     'DryRun: ' if self.dryrun else '',
                     os.path.join(path, item),
                 ), verbosity=3)
@@ -279,6 +293,9 @@ class Shears(Tool):
             remove_files.append(backup_files.pop(0))
 
         # remove the files for this level
+        self.write('\n{}    Prune the existing backup files'.format(
+            'DryRun: ' if self.dryrun else '',
+        ), verbosity=2)
         levels = list(self.backup_levels.keys())
         level_index = levels.index(level)
         for backup_file in remove_files:
@@ -329,6 +346,9 @@ class Shears(Tool):
             remove_files.append(backup_files.pop(0))
 
         # remove the files
+        self.write('\n{}    Prune the existing backup files'.format(
+            'DryRun: ' if self.dryrun else '',
+        ), verbosity=2)
         for backup_file in remove_files:
             self.write('{}    Removing {}'.format(
                 'DryRun: ' if self.dryrun else '',
@@ -353,6 +373,13 @@ class Command(BaseCommand):
             help='File extension of the backup files to prune '
                  '(more than one can be specified)',
             nargs='+',
+        )
+        parser.add_argument(
+            '--folders',
+            action='store_true',
+            default=False,
+            dest='folders',
+            help='Indicate that folders, not files, are being pruned',
         )
         parser.add_argument(
             '--daily',

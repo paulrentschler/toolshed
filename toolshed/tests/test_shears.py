@@ -10,7 +10,8 @@ import uuid
 
 class TestShears(unittest.TestCase):
 
-    def create_files(self, start_date, num_files, extension, name_suffix=''):
+    def create_files(self, start_date, num_files, extension, name_suffix='',
+                     alt_date_format=False):
         """Create sequential backup files
 
         Arguments:
@@ -21,23 +22,34 @@ class TestShears(unittest.TestCase):
         Keyword Arguments:
             name_suffix {string} -- Optional suffix to add to the filename
                                     (Default: '')
+            alt_date_format {bool} -- Toggle between the normal YYYY-MM-DD
+                                      date format and the alternative
+                                      YYYYMMDD format (default: False which
+                                      uses the normal YYYY-MM-DD format)
         """
+        if alt_date_format:
+            date_format = '{:04d}{:02d}{:02d}'
+            separator = '-'
+        else:
+            date_format = '{:04d}-{:02d}-{:02d}'
+            separator = '_'
         if extension[0] == '.':
             extension = extension[1:]
         while num_files > 0:
-            filename = '{:04d}-{:02d}-{:02d}'.format(
+            filename = date_format.format(
                 start_date.year,
                 start_date.month,
                 start_date.day
             )
             if name_suffix:
-                filename = '{}_{}'.format(filename, name_suffix)
+                filename = '{}{}{}'.format(filename, separator, name_suffix)
             filename = '{}.{}'.format(filename, extension)
             open(os.path.join(self.tmp_path, 'daily', filename), 'a').close()
             start_date = start_date + timedelta(days=1)
             num_files -= 1
 
-    def create_folders(self, start_date, num_folders, name_suffix=''):
+    def create_folders(self, start_date, num_folders, name_suffix='',
+                       alt_date_format=False):
         """Create sequential backup folders
 
         Arguments:
@@ -48,14 +60,24 @@ class TestShears(unittest.TestCase):
             name_suffix {string} -- Optional suffix to add to the folder name
                                     (Default: '')
         """
+        if alt_date_format:
+            date_format = '{:04d}{:02d}{:02d}'
+            separator = '-'
+        else:
+            date_format = '{:04d}-{:02d}-{:02d}'
+            separator = '_'
         while num_folders > 0:
-            folder_name = '{:04d}-{:02d}-{:02d}'.format(
+            folder_name = date_format.format(
                 start_date.year,
                 start_date.month,
                 start_date.day
             )
             if name_suffix:
-                folder_name = '{}_{}'.format(folder_name, name_suffix)
+                folder_name = '{}{}{}'.format(
+                    folder_name,
+                    separator,
+                    name_suffix
+                )
             path = os.path.join(self.tmp_path, 'daily', folder_name)
             os.mkdir(path)
             open(os.path.join(path, 'test.bak'), 'a').close()
@@ -249,6 +271,115 @@ class TestShears(unittest.TestCase):
                 '2017-11-22',
                 '2017-11-23',
                 '2017-11-24',
+            ],
+            msg='Remaining folders do not match the expected folders'
+        )
+
+    def test_directory_alt__levels(self):
+        """Prune nine months of folders that span the end of the year
+
+        Uses the alternate date format
+
+        Takes nine months worth of folders, spanning from 15 Nov 2017 till
+        16 Aug 2018, and prunes them into daily, weekly, monthly, and
+        yearly directories.
+        """
+        self.create_folders(
+            date(2017, 11, 15),
+            275,
+            'backup',
+            alt_date_format=True
+        )
+        shears = Shears(
+            self.tmp_path,
+            ['', ],
+            folders=True,
+            verbosity=0,
+        )
+        shears.prune()
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'daily'))),
+            [
+                '20180803-backup',
+                '20180804-backup',
+                '20180805-backup',
+                '20180806-backup',
+                '20180807-backup',
+                '20180808-backup',
+                '20180809-backup',
+                '20180810-backup',
+                '20180811-backup',
+                '20180812-backup',
+                '20180813-backup',
+                '20180814-backup',
+                '20180815-backup',
+                '20180816-backup',
+            ],
+            msg='Daily folders do not match the expected folders'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'weekly'))),
+            [
+                '20180623-backup',
+                '20180630-backup',
+                '20180707-backup',
+                '20180714-backup',
+                '20180721-backup',
+                '20180728-backup',
+            ],
+            msg='Weekly folders do not match the expected folders'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'monthly'))),
+            [
+                '20180131-backup',
+                '20180228-backup',
+                '20180331-backup',
+                '20180430-backup',
+                '20180531-backup',
+                '20180731-backup',
+            ],
+            msg='Monthly folders do not match the expected folders'
+        )
+        self.assertListEqual(
+            sorted(os.listdir(os.path.join(self.tmp_path, 'yearly'))),
+            ['20171231-backup', ],
+            msg='Yearly folders do not match the expected folders'
+        )
+
+    def test_directory_alt__limit(self):
+        """Prune 10 directories down to 6
+
+        Uses the alternate date format
+        """
+        self.create_folders(date(2017, 11, 15), 10, alt_date_format=True)
+        for item in os.listdir(os.path.join(self.tmp_path, 'daily')):
+            src = os.path.join(self.tmp_path, 'daily', item)
+            dest = os.path.join(self.tmp_path, item)
+            os.rename(src, dest)
+        for folder in ['daily', 'weekly', 'monthly', 'yearly']:
+            shutil.rmtree(
+                os.path.join(self.tmp_path, folder),
+                ignore_errors=True
+            )
+
+        shears = Shears(
+            self.tmp_path,
+            ['', ],
+            folders=True,
+            limit=6,
+            verbosity=0,
+        )
+        shears.prune()
+        self.assertListEqual(
+            sorted(os.listdir(self.tmp_path)),
+            [
+                '20171119',
+                '20171120',
+                '20171121',
+                '20171122',
+                '20171123',
+                '20171124',
             ],
             msg='Remaining folders do not match the expected folders'
         )

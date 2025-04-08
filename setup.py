@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '2024.11.1'
+version = '2025.04.1'
 
 setup(
     name='toolshed',
